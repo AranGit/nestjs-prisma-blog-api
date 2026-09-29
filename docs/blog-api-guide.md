@@ -204,6 +204,17 @@ npm run start:dev
 - **Swagger Documentation**: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
 - **API Base URL**: [http://localhost:3000/api](http://localhost:3000/api)
 
+### 🔍 การเชื่อมต่อดูข้อมูลใน PostgreSQL:
+- **DBeaver**:
+  - Host: `localhost`
+  - Port: `5433` *(พอร์ตที่แมปจาก Docker Container)*
+  - Database: `nestjs_blog`
+  - User / Password: `postgres` / `postgres`
+- **Prisma Studio**:
+  ```bash
+  npx prisma studio   # เปิดดูตารางผ่าน Web UI ที่ http://localhost:5555
+  ```
+
 ---
 
 ## 7. การทำ Unit Testing ด้วย Vitest และ Mocking
@@ -296,3 +307,22 @@ flowchart TD
 > [!CAUTION] Production Warning: ห้ามใช้ `KEYS *` เด็ดขาด!
 > Redis ทำงานด้วยสถาปัตยกรรม Single-Threaded หากใช้คำสั่ง `KEYS *` ค้นหาข้อมูลใน Production ที่มีคีย์หลักแสน/หลักล้าน Redis จะถูกบล็อกจนระบบค้างทั้งหมด!
 > ในโปรเจกต์นี้ `RedisService.delByPattern` ใช้ **`scanStream`** (`SCAN`) ซึ่งทำงานแบบ **Non-blocking Batch Iteration** ลบทีละชุดอย่างปลอดภัยต่อ Production 100%
+
+### 🖥️ 4. วิธีตรวจสอบข้อมูลใน Redis (CLI & GUI Tools)
+1. **ดูผ่าน Terminal ด้วย `redis-cli` (ผ่าน Docker Container):**
+   ```bash
+   # เข้าสู่ interactive shell ของ Redis ใน Docker
+   docker exec -it nestjs-blog-redis redis-cli
+
+   # คำสั่งพื้นฐานที่ใช้บ่อย:
+   KEYS *                           # ดูชื่อคีย์ทั้งหมดในแคช
+   GET "posts:v2:p1:l10:s:c"         # ดู Value ข้อมูล JSON ในคีย์
+   TTL "posts:v2:p1:l10:s:c"         # ตรวจสอบเวลาที่เหลือก่อนแคชหมดอายุ (วินาที)
+   FLUSHALL                         # ล้างข้อมูลทั้งหมดใน Redis
+   exit                             # ออกจาก redis-cli
+   ```
+2. **ดูผ่านโปรแกรม GUI (แนะนำ: Redis Insight - ฟรี):**
+   - ดาวน์โหลดที่ [redis.io/insight](https://redis.io/insight/)
+   - กด **Add Redis Database** -> กรอก Host: `localhost`, Port: `6379`
+   - สามารถดู Key, Value, TTL, และสถิติ Memory Usage ได้แบบ Real-time Graphical Interface
+

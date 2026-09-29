@@ -242,6 +242,39 @@ erDiagram
 
 ---
 
+## 🔍 การดูและตรวจสอบข้อมูลใน Database & Redis (Inspection Tools)
+
+### 🐘 1. การดูข้อมูลใน PostgreSQL
+* **ทางเลือกที่ 1: DBeaver (GUI Client)**
+  * **Host**: `localhost`
+  * **Port**: `5433` *(สำคัญ: ต้องเป็น 5433 ที่ Map มาจาก Docker ไม่ใช่ 5432)*
+  * **Database**: `nestjs_blog`
+  * **Username / Password**: `postgres` / `postgres`
+* **ทางเลือกที่ 2: Prisma Studio (Web GUI ในตัว ไม่ต้องลงโปรแกรมเพิ่ม)**
+  ```bash
+  npx prisma studio
+  ```
+  เปิดดูและจัดการข้อมูลผ่านเบราว์เซอร์ได้ที่ [http://localhost:5555](http://localhost:5555)
+
+### ⚡ 2. การดูข้อมูลใน Redis
+* **ทางเลือกที่ 1: ดูผ่าน Terminal ด้วย `redis-cli` (ไม่ต้องลงโปรแกรมเพิ่ม)**
+  ```bash
+  # เข้าใช้งาน Redis CLI ใน Docker Container
+  docker exec -it nestjs-blog-redis redis-cli
+
+  # ตัวอย่างคำสั่งที่ใช้บ่อย:
+  KEYS *                           # ดูคีย์ทั้งหมดในแคช
+  GET "posts:v2:p1:l10:s:c"         # ดูข้อมูลในคีย์นั้น (JSON string)
+  TTL "posts:v2:p1:l10:s:c"         # ดูเวลานับถอยหลังก่อนหมดอายุ (วินาที)
+  FLUSHALL                         # ล้างแคชทั้งหมดใน Redis
+  exit                             # ออกจาก redis-cli
+  ```
+* **ทางเลือกที่ 2: Redis Insight (Official GUI ฟรี)**
+  * ดาวน์โหลดที่ [redis.io/insight](https://redis.io/insight/)
+  * เชื่อมต่อด้วย Host: `localhost`, Port: `6379` (ไม่ต้องใส่รหัสผ่าน)
+
+---
+
 ## 🧪 การทำ Unit Testing ด้วย Vitest & Mocking
 
 โปรเจกต์นี้ตั้งค่า **Unit Testing** ด้วย **Vitest** และ **`vitest-mock-extended`** ครบถ้วน:
