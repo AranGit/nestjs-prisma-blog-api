@@ -7,11 +7,16 @@ import {
   Param,
   Delete,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import { Role } from '@prisma/client';
 import { UsersService } from './users.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
 
 /**
  * ==============================================================================
@@ -19,14 +24,11 @@ import { UpdateUserDto } from './dto/update-user.dto.js';
  * ==============================================================================
  * ทำหน้าที่รับ HTTP Request จาก Client, นำพาข้อมูลเข้าสู่การ Validate และส่งต่อให้ Service
  *
- * 💡 Backend Concept:
- * 1. `@Controller({ path: 'users', version: '1' })`:
- *    - เมื่อรวมกับ Global Prefix 'api' จะได้ URL Base: `/api/v1/users`
- * 2. `@ApiTags('Users')`: จัดหมวดหมู่ API ในหน้า Swagger UI ให้อยู่ในกลุ่ม 'Users'
- * 3. Pipes (`ParseIntPipe`):
- *    - URL parameter เช่น `:id` ใน HTTP จะส่งมาเป็น String เสมอ (เช่น "/users/5")
- *    - `ParseIntPipe` จะทำการแปลง "5" ให้เป็นตัวเลข number 5 โดยอัตโนมัติ
- *    - หากผู้ใช้ส่งค่าที่ไม่ใช่ตัวเลข เช่น "/users/abc" ระบบจะตอบกลับ 400 Bad Request ทันทีโดยไม่ต้องเขียน if-else
+ * 💡 RBAC Authorization Rules:
+ * - `POST /users`: เฉพาะ ADMIN (Admin User Provisioning) ส่วนคนทั่วไปใช้ `/auth/register`
+ * - `GET /users`, `GET /users/:id`: ดูข้อมูลผู้ใช้
+ * - `PATCH /users/:id`: แก้ไขข้อมูลผู้ใช้
+ * - `DELETE /users/:id`: เฉพาะ ADMIN เท่านั้น
  * ==============================================================================
  */
 @ApiTags('Users')
@@ -37,13 +39,21 @@ export class UsersController {
 
   /**
    * [POST] /api/v1/users
-   * สร้างผู้ใช้งานใหม่
-   * @Body(): ดึงข้อมูลจาก JSON Request Body และแปลงเป็น CreateUserDto ผ่าน ValidationPipe
+   * สร้างผู้ใช้งานใหม่ (เฉพาะ ADMIN เท่านั้น เช่น การสร้าง staff, author หรือ admin อื่นๆ)
+   * สำหรับผู้ใช้ทั่วไปที่ต้องการสมัครสมาชิกเอง ให้ใช้ POST /api/v1/auth/register
    */
   @Post()
-  @ApiOperation({ summary: 'Create a new user', description: 'Creates a user account and returns user details excluding password.' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Create a new user (Admin only)',
+    description: 'Admin user provisioning endpoint. Allows setting roles (ADMIN/AUTHOR). For self-registration, use /api/v1/auth/register.',
+  })
   @ApiResponse({ status: 201, description: 'User successfully created.' })
   @ApiResponse({ status: 400, description: 'Validation failed.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Missing or invalid token.' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Requires ADMIN role.' })
   @ApiResponse({ status: 409, description: 'User with this email already exists.' })
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
@@ -88,12 +98,17 @@ export class UsersController {
 
   /**
    * [DELETE] /api/v1/users/:id
-   * ลบผู้ใช้งานออกจากระบบ
+   * ลบผู้ใช้งานออกจากระบบ (เฉพาะ ADMIN เท่านั้น)
    */
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a user', description: 'Deletes a user account and cascades delete to their posts.' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a user (Admin only)', description: 'Deletes a user account and cascades delete to their posts. Requires ADMIN role.' })
   @ApiParam({ name: 'id', type: Number, description: 'User ID to delete' })
   @ApiResponse({ status: 200, description: 'User successfully deleted.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Missing or invalid token.' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Requires ADMIN role.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.remove(id);

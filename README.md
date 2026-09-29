@@ -310,20 +310,20 @@ exit
 - **Deep Mocking**: ใช้ `mockDeep<PrismaClient>()` จำลองพฤติกรรมฐานข้อมูลทั้งหมด ทำให้รันเทสต์ได้โดยไม่ต้องต่อ Network หรือ Database จริง
 - **AAA Pattern**: โครงสร้าง Arrange - Act - Assert ชัดเจน
 
-### Test Suites Breakdown (45 Tests Passed)
+### Test Suites Breakdown (46 Tests Passed)
 
 | Test Suite File | Tests Count | Scope of Testing |
 |---|---|---|
 | `src/auth/auth.service.spec.ts` | 7 tests | Register with bcrypt, Login with token signing, Invalid password handling |
 | `src/auth/guards/roles.guard.spec.ts` | 3 tests | Role metadata reading, Admin authorization, Insufficient role rejection |
 | `src/categories/categories.service.spec.ts` | 7 tests | Duplicate category prevention, Category CRUD, Restrict check |
-| `src/users/users.service.spec.ts` | 7 tests | Duplicate email check, Password hashing integration, User CRUD |
+| `src/users/users.service.spec.ts` | 8 tests | Duplicate email check, Password hashing integration, Role provisioning, User CRUD |
 | `src/posts/posts.service.spec.ts` | 13 tests | V1 CRUD, Ownership checks (Admin vs Author), V2 Pagination, Cache Hit/Miss, Invalidation |
 | `src/redis/redis.service.spec.ts` | 8 tests | JSON get/set with TTL, Single key delete, Non-blocking scanStream pipeline, Lifecycle |
 
 ### Test Commands
 ```bash
-# รัน Unit Test ทั้งหมด 45 ข้อ
+# รัน Unit Test ทั้งหมด 46 ข้อ
 npm test
 
 # รัน Test แบบ Watch Mode (Hot Reload เมื่อโค้ดเปลี่ยน)
@@ -342,7 +342,7 @@ npm run test:cov
 | `npm run start:dev` | รัน Docker (Postgres + Redis) + Sync Schema + รัน NestJS Server อัตโนมัติ |
 | `npm run start:dev:only` | รันเฉพาะ NestJS Server (กรณีที่ Database & Redis รันอยู่แล้ว) |
 | `npm run db:stop` | ปิดทั้ง PostgreSQL และ Redis Docker Containers |
-| `npm test` | รัน Unit Tests ทั้งหมดด้วย Vitest (45 tests) |
+| `npm test` | รัน Unit Tests ทั้งหมดด้วย Vitest (46 tests) |
 | `npm run test:watch` | รัน Unit Tests แบบโหมด Watch |
 | `npm run test:cov` | ตรวจสอบ Code Coverage รายงานเปอร์เซ็นต์โค้ดที่ถูกทดสอบ |
 | `npx prisma studio` | เปิด Web GUI ดูและจัดการข้อมูลใน Database |

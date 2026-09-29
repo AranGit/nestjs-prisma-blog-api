@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { mockDeep, DeepMockProxy } from 'vitest-mock-extended';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Role } from '@prisma/client';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -84,6 +84,37 @@ describe('UsersService', () => {
       ).rejects.toThrow(ConflictException);
 
       expect(prismaMock.user.create).not.toHaveBeenCalled();
+    });
+
+    it('ควรส่งต่อ role ไปยัง prisma.user.create เมื่อมีการระบุ role เช่น ADMIN', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+
+      const mockAdminUser = {
+        id: 2,
+        email: 'admin@example.com',
+        name: 'Admin User',
+        role: Role.ADMIN,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      prismaMock.user.create.mockResolvedValue(mockAdminUser as any);
+
+      const result = await service.create({
+        email: 'admin@example.com',
+        password: 'password123',
+        name: 'Admin User',
+        role: Role.ADMIN,
+      });
+
+      expect(result.role).toBe(Role.ADMIN);
+      expect(prismaMock.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            email: 'admin@example.com',
+            role: Role.ADMIN,
+          }),
+        }),
+      );
     });
   });
 

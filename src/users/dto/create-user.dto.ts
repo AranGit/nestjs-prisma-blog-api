@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, IsEnum, IsOptional } from 'class-validator';
+import { Role } from '@prisma/client';
 
 /**
  * ==============================================================================
@@ -34,4 +35,16 @@ export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
   name: string;
+
+  // @IsEnum: อนุญาตให้ระบุ Role (ADMIN หรือ AUTHOR) หากไม่ระบุจะเป็น AUTHOR ตาม Default ใน Schema
+  @ApiProperty({
+    example: 'AUTHOR',
+    enum: Role,
+    description: 'User access role (ADMIN or AUTHOR). Defaults to AUTHOR.',
+    required: false,
+    default: Role.AUTHOR,
+  })
+  @IsEnum(Role)
+  @IsOptional()
+  role?: Role;
 }

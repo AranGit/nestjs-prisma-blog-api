@@ -247,11 +247,11 @@ flowchart LR
     Service -.->|Assert Result| TestSpec
 ```
 
-### รายการ Test Suites ทั้งหมด (45 Tests):
+### รายการ Test Suites ทั้งหมด (46 Tests):
 - `src/auth/auth.service.spec.ts` (7 tests)
 - `src/auth/guards/roles.guard.spec.ts` (3 tests)
 - `src/categories/categories.service.spec.ts` (7 tests)
-- `src/users/users.service.spec.ts` (7 tests)
+- `src/users/users.service.spec.ts` (8 tests)
 - `src/posts/posts.service.spec.ts` (13 tests: V1 CRUD, Ownership, V2 Pagination, Cache Hit/Miss, Invalidation)
 - `src/redis/redis.service.spec.ts` (8 tests: get, set with TTL, del, delByPattern via scanStream)
 
@@ -273,7 +273,7 @@ it('ควรสร้างหมวดหมู่สำเร็จเมื�
 
 ### คำสั่งรัน Test:
 ```bash
-npm test            # รันการทดสอบทั้งหมด (45 tests)
+npm test            # รันการทดสอบทั้งหมด (46 tests)
 npm run test:watch  # รันแบบ Watch Mode
 npm run test:cov    # รายงาน Coverage
 ```
@@ -335,6 +335,18 @@ flowchart TD
     CheckOwner -- "Yes" --> AllowAuthor["Allow Mutation (Resource Owner)"]
     CheckOwner -- "No" --> Ret403["403 Forbidden\n(Cannot touch other's post)"]
 ```
+
+### 4. สรุปความแตกต่างของ User Endpoints และสิทธิ์การเข้าถึง (RBAC Matrix)
+
+| Endpoint | Method | Guard / Role | Description |
+|---|---|---|---|
+| `/api/v1/auth/register` | POST | Public | สมัครสมาชิกด้วยตนเองสำหรับผู้ใช้ทั่วไป กำหนด role เป็น `AUTHOR` โดยอัตโนมัติ และคืน JWT Access Token ทันที |
+| `/api/v1/auth/login` | POST | Public | เข้าสู่ระบบเพื่อรับ JWT Access Token |
+| `/api/v1/users` | POST | `JwtAuthGuard`, `RolesGuard` (`ADMIN`) | **Admin User Provisioning** - ผู้ดูแลระบบสร้างบัญชีผู้ใช้ใหม่ สามารถกำหนด role (`ADMIN` หรือ `AUTHOR`) ได้ |
+| `/api/v1/users` | GET | Public | ดูรายการผู้ใช้ทั้งหมดในระบบ |
+| `/api/v1/users/:id` | GET | Public | ดูข้อมูลผู้ใช้รายบุคคลพร้อมบทความที่เขียน |
+| `/api/v1/users/:id` | PATCH | Public | แก้ไขข้อมูลผู้ใช้ |
+| `/api/v1/users/:id` | DELETE | `JwtAuthGuard`, `RolesGuard` (`ADMIN`) | ลบผู้ใช้งานออกจากระบบ (เฉพาะ ADMIN เท่านั้น) |
 
 ---
 
