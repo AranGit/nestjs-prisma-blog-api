@@ -1,6 +1,7 @@
 # 📰 NestJS + Prisma + PostgreSQL Blog CMS API
 
-> 📖 **คู่มือเรียนรู้พื้นฐาน Backend ฉบับสมบูรณ์ (From Zero to Backend Dev)**: อ่านฉบับเต็มได้ที่ [docs/blog-api-guide.md](docs/blog-api-guide.md)
+> 🗺️ **แผนที่เส้นทางการเรียนรู้ (Learning Roadmap)**: แนะนำให้เริ่มศึกษาตามลำดับได้ที่ [docs/LEARNING_ROADMAP.md](docs/LEARNING_ROADMAP.md)  
+> 📖 **คู่มือเจาะลึก 9 เสาหลัก Backend ฉบับสมบูรณ์**: อ่านเนื้อหาภาคทฤษฎีและแนวคิดได้ที่ [docs/blog-api-guide.md](docs/blog-api-guide.md)
 
 ---
 

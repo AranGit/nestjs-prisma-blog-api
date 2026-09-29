@@ -1,6 +1,8 @@
 # 📘 NestJS Master Guide: From Zero to Backend Developer
 *คู่มือเรียนรู้พื้นฐาน Backend Development ครบวงจรด้วย NestJS, PostgreSQL & Prisma*
 
+> 🗺️ **ต้องการลำดับการเริ่มอ่านและไฟล์ที่ต้องสำรวจทีละสเต็ป?** เข้าไปดู [Roadmap การเรียนรู้ (LEARNING_ROADMAP.md)](./LEARNING_ROADMAP.md)
+
 ---
 
 ## 🎯 สารบัญ (Table of Contents)
