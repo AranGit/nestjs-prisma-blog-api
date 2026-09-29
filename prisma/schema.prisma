@@ -1,0 +1,115 @@
+// ==============================================================================
+// 📌 Prisma Schema File (ไฟล์กำหนดโครงสร้างฐานข้อมูล)
+// ==============================================================================
+// Prisma Schema คือไฟล์ศูนย์กลางที่ใช้กำหนด Data Models, Relations, และ Database Provider
+// The central configuration for data models, database connection, and client generator.
+// Docs: https://pris.ly/d/prisma-schema
+// ==============================================================================
+
+// 1. Generator Client: กำหนดว่าจะ generate client เป็นภาษาอะไร
+// Generates the Prisma Client library for TypeScript/JavaScript based on this schema.
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 2. Datasource: กำหนดประเภท Database และ Connection URL ที่อ่านจาก Environment Variable
+// Specifies PostgreSQL as the database provider and points to the connection string in .env
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==============================================================================
+// 👤 Model: User (ตารางผู้ใช้งาน)
+// ==============================================================================
+// เก็บข้อมูลผู้ใช้ เช่น ผู้เขียนบทความ (Author)
+// Stores user account data who can author blog posts.
+model User {
+  // @id: Primary Key ประจำตาราง (รหัสประจำตัวที่ไม่ซ้ำกัน)
+  // @default(autoincrement()): กำหนดให้ฐานข้อมูลสร้างเลข 1, 2, 3... ให้อัตโนมัติ
+  id        Int      @id @default(autoincrement())
+
+  // @unique: ห้ามซ้ำในระดับ Database (Unique Constraint)
+  email     String   @unique
+
+  // รหัสผ่าน (ควรถูก Hash ก่อนบันทึกลง Database เสมอ เช่น bcrypt)
+  password  String
+
+  // ชื่อผู้ใช้งาน (Display name)
+  name      String
+
+  // @default(now()): กำหนดเวลาปัจจุบันอัตโนมัติเมื่อสร้าง Record
+  createdAt DateTime @default(now())
+
+  // @updatedAt: อัปเดต Timestamp อัตโนมัติทุกครั้งที่มีการแก้ไข Record
+  updatedAt DateTime @updatedAt
+
+  // 1-to-Many Relation: ผู้ใช้ 1 คน สามารถเขียนได้หลายบทความ (User -> Post[])
+  // ไม่ได้สร้าง Column จริงในตาราง users แต่เป็น Virtual field สำหรับ Prisma Client
+  posts     Post[]
+
+  // @@map: แมปชื่อ Model "User" ให้ตรงกับชื่อตารางจริงใน PostgreSQL เป็นตัวพิมพ์เล็ก "users"
+  // Best Practice ใน PostgreSQL นิยมใช้ snake_case หรือ lowercase plural table names
+  @@map("users")
+}
+
+// ==============================================================================
+// 📝 Model: Post (ตารางบทความ)
+// ==============================================================================
+// เก็บบทความในบล็อก พร้อมความสัมพันธ์กับ User (Author) และ Category
+// Stores blog post content and links to its author and category.
+model Post {
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String
+
+  // สถานะการเผยแพร่: default เป็น false (ฉบับร่าง / Draft)
+  isPublished Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // ---------------------------------------------------------------------------
+  // 🔗 Foreign Key & Relationship 1: User (Author)
+  // ---------------------------------------------------------------------------
+  // authorId: Foreign Key ชี้ไปยัง User.id
+  authorId   Int
+
+  // @relation: กำหนดเงื่อนไขความสัมพันธ์
+  // - fields: [authorId] คือ Foreign Key ในตารางนี้
+  // - references: [id] คือ Primary Key ในตาราง User
+  // - onDelete: Cascade หมายถึง ถ้า User ถูกลบ บทความทั้งหมดของ User คนนั้นจะถูกลบตามไปด้วยอัตโนมัติ
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  // ---------------------------------------------------------------------------
+  // 🔗 Foreign Key & Relationship 2: Category
+  // ---------------------------------------------------------------------------
+  // categoryId: Foreign Key ชี้ไปยัง Category.id
+  categoryId Int
+
+  // - onDelete: Restrict หมายถึง ไม่อนุญาตให้ลบ Category หากยังมี Post ผูกอยู่กับ Category นั้น
+  // ป้องกันไม่ให้เกิดบทความที่ไม่มีหมวดหมู่ (Orphaned posts)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@map("posts")
+}
+
+// ==============================================================================
+// 🏷️ Model: Category (ตารางหมวดหมู่)
+// ==============================================================================
+// จัดกลุ่มประเภทของบทความ เช่น Tech, Lifestyle, Tutorial
+// Organizes blog posts into distinct categories.
+model Category {
+  id        Int      @id @default(autoincrement())
+
+  // ชื่อหมวดหมู่ต้องไม่ซ้ำกัน
+  name      String   @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 1-to-Many Relation: 1 หมวดหมู่มีได้หลายบทความ
+  posts     Post[]
+
+  @@map("categories")
+}
