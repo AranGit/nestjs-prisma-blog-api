@@ -8,18 +8,19 @@
 - 🔒 **Authentication & JWT**: ระบบสมัครสมาชิก, เข้าสู่ระบบ และออก Access Token ด้วย Passport & JWT
 - 🛡️ **Role-Based Access Control (RBAC)**: แบ่งระดับสิทธิ์ผู้ใช้เป็น `ADMIN` และ `AUTHOR` พร้อมระบบปกป้องความเป็นเจ้าของบทความ (Ownership Protection)
 - 🔑 **Password Hashing (bcrypt)**: เข้ารหัสผ่านอย่างปลอดภัยก่อนบันทึกลง Database
+- ⚡ **In-Memory Caching with Redis**: กลยุทธ์ **Cache-Aside Pattern** บน `GET /api/v2/posts` (TTL = 60s) พร้อมระบบ Non-blocking Cache Invalidation (`scanStream`)
 - 🐘 **PostgreSQL & Prisma 6 ORM**: Data Modeling ที่มี Type-Safety สูงสุด พร้อมความสัมพันธ์แบบ 1-to-Many
 - 🛡️ **DTO & Class Validation**: ป้องกันข้อมูลผิดพลาดและช่องโหว่ Mass Assignment ด้วย `class-validator`
 - 🎯 **URI API Versioning**: รองรับทั้ง `/api/v1` (CRUD ปกติ) และ `/api/v2` (Pagination, Metrics, Analytics)
 - 🚨 **Global Exception Filters**: ระบบดักจับ Error และแปลงเป็น JSON Format มาตรฐานเดียวกันทั้งระบบ
 - 📚 **Swagger (OpenAPI) Documentation**: มี Interactive Web UI พร้อมปุ่ม **Authorize** สำหรับใส่ JWT Token
-- 🐳 **One-Command Dev Environment**: สคริปต์เปิด Docker PostgreSQL + ซิงค์ Prisma Schema + รัน Server อัตโนมัติ
+- 🐳 **One-Command Dev Environment**: สคริปต์เปิด Docker PostgreSQL + Redis + ซิงค์ Prisma Schema + รัน Server อัตโนมัติ
 
 ---
 
 ## 🏗️ สถาปัตยกรรมระบบ (System Architecture & Flow)
 
-NestJS ทำงานตามหลักการ **Separation of Concerns (SoC)** โดยแบ่งหน้าที่อย่างชัดเจนในแต่ละชั้น:
+NestJS ทำงานตามหลักการ **Separation of Concerns (SoC)** โดยแบ่งหน้าที่อย่างชัดเจนในแต่ละชั้น พร้อม Cache Layer:
 
 ```mermaid
 flowchart LR
@@ -30,20 +31,25 @@ flowchart LR
         Filter["🚨 Exception Filter\n(Format Errors)"]
         Controller["🌐 Controller\n(Routing & HTTP)"]
         Service["🧠 Service\n(Business Logic)"]
+        RedisServ["⚡ RedisService\n(In-Memory Cache)"]
     end
     
-    subgraph DataLayer ["🗄️ Data Layer"]
+    subgraph Storage ["💾 Storage Layer"]
+        Redis[(⚡ Redis 7 Cache\nPort 6379)]
         PrismaService["🔌 PrismaService\n(Prisma ORM)"]
-        Postgres[(🐘 PostgreSQL Database)]
+        Postgres[(🐘 PostgreSQL\nPort 5433)]
     end
 
     Client -->|HTTP Request| Pipe
     Pipe -->|Valid DTO| Controller
     Controller -->|Calls method| Service
-    Service -->|Executes query| PrismaService
-    PrismaService -->|SQL Query| Postgres
-    Postgres -->|Result Data| PrismaService
-    PrismaService --> Service
+
+    Service -->|1. Check Cache| RedisServ
+    RedisServ <-->|Hit / Miss / Invalidate| Redis
+
+    Service -->|2. On Cache Miss: Query| PrismaService
+    PrismaService <-->|SQL Queries| Postgres
+
     Service --> Controller
     Controller -->|JSON Response| Client
     
@@ -132,6 +138,14 @@ erDiagram
 ### 6. Query Optimization with `Promise.all`
 ใน v2 Posts Pagination เราต้องการทั้ง **จำนวนข้อมูลทั้งหมด (`count`)** และ **ข้อมูลของหน้านั้น (`findMany`)** แทนที่จะสั่งทำงานทีละคำสั่ง (Sequential) เราใช้ `Promise.all` สั่งให้ฐานข้อมูลประมวลผลพร้อมกันในระดับ Database ช่วยลด Response Time ลงได้กว่าครึ่ง!
 
+### 7. Cache-Aside Pattern & Safe Invalidation with Redis
+เมื่อมีผู้ใช้งานอ่านบล็อกพร้อมกันจำนวนมาก การคิวรี PostgreSQL ซ้ำๆ จะทำให้ Database CPU พุ่งสูง เราจึงนำ Redis In-Memory Data Store เข้ามาช่วย:
+- **Cache-Aside (Lazy Loading)** บน `GET /api/v2/posts`:
+  1. ดึงจาก Redis ก่อนด้วย Cache Key เช่น `posts:v2:p1:l10:s:c`
+  2. **Cache Hit**: คืนค่ากลับทันที (< 5ms) โดย Database ไม่ต้องทำงานเลย
+  3. **Cache Miss**: คิวรีจาก PostgreSQL -> บันทึกลง Redis พร้อม TTL (Time-To-Live = 60 วินาที) -> คืนค่าให้ Client
+- **Non-blocking Invalidation**: เมื่อมีการ Create, Update หรือ Delete บทความ ระบบจะเรียก `delByPattern('posts:v2:*')` โดยใช้ `scanStream` (ห้ามใช้ `KEYS *` เด็ดขาดเพื่อไม่ให้บล็อก Redis Event Loop) เพื่อล้างแคชรายการบทความทั้งหมด ให้ผู้ใช้เห็นข้อมูลที่สดใหม่อยู่เสมอ
+
 ---
 
 ## 📋 สรุป API Endpoints ทั้งหมด (API Reference)
@@ -166,7 +180,7 @@ erDiagram
 
 | Method | Endpoint | Query Parameters | Description |
 |---|---|---|---|
-| `GET` | `/api/v2/posts` | `page`, `limit`, `search`, `categoryId` | คืนค่าบทความแบบแบ่งหน้า พร้อมการค้นหาและ Metadata |
+| `GET` | `/api/v2/posts` | `page`, `limit`, `search`, `categoryId` | คืนค่าบทความแบบแบ่งหน้า พร้อม Redis Caching (TTL 60s) และ Metadata |
 | `GET` | `/api/v2/posts/stats` | - | สรุปสถิติบทความ (Total, Published, Drafts, Categories) |
 | `GET` | `/api/v2/posts/:id` | - | ดึงบทความเดี่ยว พร้อมคำนวณเวลาอ่านและแนะนำบทความที่เกี่ยวข้อง |
 
@@ -200,7 +214,7 @@ erDiagram
 
 ### ความต้องการของระบบ (Prerequisites)
 - [Node.js](https://nodejs.org/) (v18 หรือใหม่กว่า)
-- [Docker Desktop](https://www.docker.com/) (สำหรับรัน PostgreSQL Container)
+- [Docker Desktop](https://www.docker.com/) (สำหรับรัน PostgreSQL & Redis Containers)
 
 ### ขั้นตอนการรัน
 
@@ -217,7 +231,7 @@ erDiagram
    ```bash
    npm run start:dev
    ```
-   *สคริปต์จะตรวจสอบ Docker, สตาร์ท PostgreSQL Container บน Port 5433, รอจน Database พร้อม, ซิงค์ Prisma Schema, และเปิด NestJS Server แบบ Hot Reload ให้อัตโนมัติ!*
+   *สคริปต์จะตรวจสอบ Docker, สตาร์ท PostgreSQL Container บน Port 5433 และ Redis 7 Container บน Port 6379, รอจนฐานข้อมูลพร้อม, ซิงค์ Prisma Schema, และเปิด NestJS Server แบบ Hot Reload ให้อัตโนมัติ!*
 
 4. **เปิดดูเอกสารและทดสอบ API:**
    - 📚 **Swagger UI**: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
@@ -228,12 +242,12 @@ erDiagram
 ## 🧪 การทำ Unit Testing ด้วย Vitest & Mocking
 
 โปรเจกต์นี้ตั้งค่า **Unit Testing** ด้วย **Vitest** และ **`vitest-mock-extended`** ครบถ้วน:
-- **Fast Execution**: รันเทสต์ได้เร็วมาก (เฉลี่ยไม่ถึง 0.5 วินาที)
-- **Deep Mocking**: ใช้ `mockDeep<PrismaClient>()` จำลอง Database ทั้งหมด ทำให้ทดสอบได้โดยไม่ต้องเชื่อมต่อฐานข้อมูลจริง
+- **Fast Execution**: รันเทสต์ได้เร็วมาก (เฉลี่ยไม่ถึง 1 วินาที)
+- **Deep Mocking**: ใช้ `mockDeep<PrismaClient>()` จำลอง Database และ Mock Redis Client ทำให้ทดสอบได้โดยไม่ต้องต่อ Network/Service จริง
 - **AAA Pattern (Arrange - Act - Assert)**: โครงสร้างการเขียนเทสต์ที่เป็นระเบียบ อ่านง่าย
 
 ```bash
-# 1. รัน Unit Test ทั้งหมด 35 ข้อ (Auth, RolesGuard, Categories, Users, Posts)
+# 1. รัน Unit Test ทั้งหมด 45 ข้อ (Auth, RolesGuard, Categories, Users, Posts, Redis)
 npm test
 
 # 2. รัน Test แบบ Watch Mode (จะเทสต์ใหม่อัตโนมัติเมื่อแก้โค้ด)
@@ -249,10 +263,10 @@ npm run test:cov
 
 | Command | หน้าที่ |
 |---|---|
-| `npm run start:dev` | รัน Docker + Sync Schema + รัน NestJS Server ครบจบในคำสั่งเดียว |
-| `npm run start:dev:only` | รันเฉพาะ NestJS Server (กรณีที่ Database รันอยู่แล้ว) |
-| `npm run db:stop` | ปิด PostgreSQL Docker Container |
-| `npm test` | รัน Unit Tests ทั้งหมดด้วย Vitest |
+| `npm run start:dev` | รัน Docker (Postgres + Redis) + Sync Schema + รัน NestJS Server ครบจบในคำสั่งเดียว |
+| `npm run start:dev:only` | รันเฉพาะ NestJS Server (กรณีที่ Database & Redis รันอยู่แล้ว) |
+| `npm run db:stop` | ปิดทั้ง PostgreSQL และ Redis Docker Containers |
+| `npm test` | รัน Unit Tests ทั้งหมดด้วย Vitest (45 tests) |
 | `npm run test:watch` | รัน Unit Tests แบบโหมด Watch (Hot Reload Tests) |
 | `npm run test:cov` | ตรวจสอบ Code Coverage รายงานเปอร์เซ็นต์โค้ดที่ถูกทดสอบ |
 | `npx prisma studio` | เปิด Web GUI ดูและจัดการข้อมูลใน Database ด้วย Prisma Studio |
@@ -263,9 +277,9 @@ npm run test:cov
 
 ## 🗺️ เส้นทางพัฒนาต่อยอดสู่ Senior Backend (Next Steps for Career Growth)
 
-เพื่อยกระดับโปรเจกต์นี้ให้พร้อมสำหรับ Production ระดับสูง ลองเพิ่มฟีเจอร์เหล่านี้:
-1. **Authentication & Authorization**: ติดตั้ง `@nestjs/jwt` และ `passport` เพื่อทำระบบ Login, Register, และ Role-Based Access Control (Admin vs Author)
-2. **Password Hashing**: ใช้ `bcrypt` เข้ารหัสผ่านก่อนบันทึกลงฟิลด์ `password` ในฐานข้อมูล
-3. **Caching with Redis**: แคชผลลัพธ์ของ `GET /api/v2/posts` ด้วย Redis เพื่อลดภาระการคิวรีฐานข้อมูล
+เพื่อยกระดับโปรเจกต์นี้ให้พร้อมสำหรับ Production ระดับสูง:
+1. ✅ **Authentication & Authorization**: ติดตั้ง `@nestjs/jwt` และ `passport` ทำระบบ Login, Register, และ Role-Based Access Control (Admin vs Author)
+2. ✅ **Password Hashing**: ใช้ `bcrypt` เข้ารหัสผ่านก่อนบันทึกลงฟิลด์ `password` ในฐานข้อมูล
+3. ✅ **Caching with Redis**: แคชผลลัพธ์ของ `GET /api/v2/posts` ด้วย Redis เพื่อลดภาระการคิวรีฐานข้อมูล พร้อมระบบ Safe Invalidation
 4. **File Uploads**: รองรับการอัปโหลดรูปภาพหน้าปกบทความ (Cover Image) ไปยัง AWS S3 หรือ Cloudinary
-5. **Unit & E2E Testing**: เขียน Integration Test ด้วย Vitest และ Supertest เพื่อการันตีคุณภาพของโค้ด
+5. **E2E Testing**: เขียน Integration/End-to-End Test ด้วย Vitest และ Supertest เพื่อการันตี HTTP Flow ทั้งหมด

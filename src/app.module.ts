@@ -4,6 +4,7 @@ import { UsersModule } from './users/users.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { PostsModule } from './posts/posts.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { RedisModule } from './redis/redis.module.js';
 
 /**
  * ==============================================================================
@@ -13,8 +14,9 @@ import { AuthModule } from './auth/auth.module.js';
  *
  * 💡 Backend Architecture Concept:
  * - NestJS ใช้แนวคิด Modular Architecture (สถาปัตยกรรมแบบแยกโมดูล)
- * - แต่ละโมดูลรับผิดชอบ Business Domain ของตัวเอง (Users, Categories, Posts, Auth)
+ * - แต่ละโมดูลรับผิดชอบ Business Domain ของตัวเอง (Users, Categories, Posts, Auth, Redis)
  * - `PrismaModule`: โมดูลสำหรับจัดการการเชื่อมต่อฐานข้อมูล
+ * - `RedisModule`: โมดูลสำหรับจัดการแคชความเร็วสูงในหน่วยความจำ
  * - `AuthModule`: โมดูลสำหรับจัดการความปลอดภัย ยืนยันตัวตน และออก JWT Token
  * - `UsersModule`: โมดูลสำหรับจัดการผู้ใช้งาน
  * - `CategoriesModule`: โมดูลสำหรับจัดการหมวดหมู่บทความ
@@ -24,6 +26,7 @@ import { AuthModule } from './auth/auth.module.js';
 @Module({
   imports: [
     PrismaModule,     // Database layer (Global module)
+    RedisModule,      // In-Memory Caching layer (Global module)
     AuthModule,       // Security & Authentication domain
     UsersModule,      // User domain
     CategoriesModule, // Category domain

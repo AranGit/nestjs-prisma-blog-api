@@ -1,29 +1,45 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mockDeep, DeepMockProxy } from 'vitest-mock-extended';
 import { PrismaClient } from '@prisma/client';
 import { NotFoundException } from '@nestjs/common';
 import { PostsService } from './posts.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { RedisService } from '../redis/redis.service.js';
 
 /**
  * ==============================================================================
  * 🧪 Unit Tests: PostsService (V1 & V2)
  * ==============================================================================
  * ทดสอบทั้ง V1 CRUD และ V2 Advanced Logic (Pagination, Reading Time, Stats)
+ * พร้อมทดสอบระบบ Redis Caching (Cache-Aside & Cache Invalidation)
  *
  * 💡 Focus Areas:
  * 1. Foreign Key Verification: ตรวจสอบ Author และ Category ก่อน Create
  * 2. V2 Pagination Metadata: ทดสอบการคำนวณ totalPages, hasNextPage, hasPreviousPage
  * 3. V2 Calculated Attributes: ทดสอบการคำนวณ readingTimeMinutes จากจำนวนคำ
+ * 4. Redis Cache Hit & Miss: ทดสอบการดึงจากแคช หรือการคิวรี DB เมื่อแคชว่าง
+ * 5. Cache Invalidation: ทดสอบการล้างแคชเมื่อมีการ CUD (Create, Update, Delete)
  * ==============================================================================
  */
 describe('PostsService', () => {
   let service: PostsService;
   let prismaMock: DeepMockProxy<PrismaClient>;
+  let redisServiceMock: {
+    get: ReturnType<typeof vi.fn>;
+    set: ReturnType<typeof vi.fn>;
+    del: ReturnType<typeof vi.fn>;
+    delByPattern: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     prismaMock = mockDeep<PrismaClient>();
+    redisServiceMock = {
+      get: vi.fn(),
+      set: vi.fn(),
+      del: vi.fn(),
+      delByPattern: vi.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -31,6 +47,10 @@ describe('PostsService', () => {
         {
           provide: PrismaService,
           useValue: prismaMock,
+        },
+        {
+          provide: RedisService,
+          useValue: redisServiceMock,
         },
       ],
     }).compile();
@@ -75,6 +95,7 @@ describe('PostsService', () => {
       expect(result.id).toBe(10);
       expect(result.author.name).toBe('John Doe');
       expect(prismaMock.post.create).toHaveBeenCalledOnce();
+      expect(redisServiceMock.delByPattern).toHaveBeenCalledWith('posts:v2:*');
     });
 
     it('ควรโยน NotFoundException หากไม่พบ Author ID', async () => {
@@ -90,6 +111,7 @@ describe('PostsService', () => {
           999, // invalid authorId
         ),
       ).rejects.toThrow(NotFoundException);
+      expect(redisServiceMock.delByPattern).not.toHaveBeenCalled();
     });
 
     it('ควรโยน NotFoundException หากไม่พบ Category ID', async () => {
@@ -106,6 +128,7 @@ describe('PostsService', () => {
           1,
         ),
       ).rejects.toThrow(NotFoundException);
+      expect(redisServiceMock.delByPattern).not.toHaveBeenCalled();
     });
   });
 
@@ -113,7 +136,7 @@ describe('PostsService', () => {
   // 2. V1 Test Suite: Ownership & Authorization (update / remove)
   // ─────────────────────────────────────────────────────────────────────────────
   describe('ownership & authorization', () => {
-    it('Author สามารถแก้ไขบทความของตัวเองได้', async () => {
+    it('Author สามารถแก้ไขบทความของตัวเองได้ และล้างแคช v2', async () => {
       const existingPost = {
         id: 1,
         title: 'My Post',
@@ -130,6 +153,7 @@ describe('PostsService', () => {
       );
 
       expect(result.title).toBe('Updated');
+      expect(redisServiceMock.delByPattern).toHaveBeenCalledWith('posts:v2:*');
     });
 
     it('Author ไม่สามารถแก้ไขบทความของคนอื่นได้ (โยน ForbiddenException)', async () => {
@@ -149,6 +173,7 @@ describe('PostsService', () => {
           { id: 99, role: 'AUTHOR' as any },
         ),
       ).rejects.toThrow();
+      expect(redisServiceMock.delByPattern).not.toHaveBeenCalled();
     });
 
     it('Admin สามารถแก้ไขบทความของใครก็ได้', async () => {
@@ -169,6 +194,24 @@ describe('PostsService', () => {
       );
 
       expect(result.title).toBe('Admin Fixed');
+      expect(redisServiceMock.delByPattern).toHaveBeenCalledWith('posts:v2:*');
+    });
+
+    it('Author สามารถลบบทความของตนเองได้ และล้างแคช v2', async () => {
+      const existingPost = {
+        id: 1,
+        title: 'My Post to Delete',
+        authorId: 10,
+      };
+      prismaMock.post.findUnique.mockResolvedValue(existingPost as any);
+      prismaMock.post.delete.mockResolvedValue(existingPost as any);
+
+      await service.remove(1, { id: 10, role: 'AUTHOR' as any });
+
+      expect(prismaMock.post.delete).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 1 } }),
+      );
+      expect(redisServiceMock.delByPattern).toHaveBeenCalledWith('posts:v2:*');
     });
   });
 
@@ -184,10 +227,39 @@ describe('PostsService', () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 3. V2 Test Suite: findAllV2() (Pagination & Search)
+  // 3. V2 Test Suite: findAllV2() (Pagination, Search & Redis Caching)
   // ─────────────────────────────────────────────────────────────────────────────
   describe('findAllV2 (v2)', () => {
-    it('ควรคำนวณ Pagination Metadata ได้ถูกต้อง', async () => {
+    it('⚡ Cache Hit: ควรคืนค่าจาก Redis Cache ทันทีโดยไม่ต้องคิวรี Prisma', async () => {
+      const cachedResult = {
+        data: [{ id: 1, title: 'Cached Post' }],
+        meta: {
+          total: 1,
+          page: 1,
+          limit: 10,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      };
+
+      // จำลองว่า Redis มีข้อมูลแคชอยู่แล้ว
+      redisServiceMock.get.mockResolvedValue(cachedResult);
+
+      const result = await service.findAllV2({ page: 1, limit: 10 });
+
+      expect(result).toEqual(cachedResult);
+      // ตรวจสอบว่าดึงแคชด้วย key ที่ถูกต้อง
+      expect(redisServiceMock.get).toHaveBeenCalledWith('posts:v2:p1:l10:s:c');
+      // ตรวจสอบว่าไม่ได้เรียก Database ผ่าน Prisma เลย!
+      expect(prismaMock.post.findMany).not.toHaveBeenCalled();
+      expect(prismaMock.post.count).not.toHaveBeenCalled();
+    });
+
+    it('⚡ Cache Miss: ควรคิวรีฐานข้อมูลและบันทึกลง Redis Cache ด้วย TTL 60 วินาที', async () => {
+      // จำลองว่า Redis แคชว่างเปล่า (Cache Miss)
+      redisServiceMock.get.mockResolvedValue(null);
+
       // จำลองว่ามีโพสต์ทั้งหมด 25 รายการในฐานข้อมูล
       prismaMock.post.count.mockResolvedValue(25);
       // จำลองคืนค่าข้อมูล 10 รายการสำหรับหน้า 1
@@ -213,9 +285,17 @@ describe('PostsService', () => {
           take: 10,
         }),
       );
+
+      // ตรวจสอบว่ามีการบันทึกผลลัพธ์ลง Redis Cache พร้อม TTL 60 วินาที
+      expect(redisServiceMock.set).toHaveBeenCalledWith(
+        'posts:v2:p1:l10:s:c',
+        result,
+        60,
+      );
     });
 
     it('ควรกำหนด hasNextPage เป็น false เมื่ออยู่หน้าสุดท้าย', async () => {
+      redisServiceMock.get.mockResolvedValue(null);
       prismaMock.post.count.mockResolvedValue(25);
       prismaMock.post.findMany.mockResolvedValue(Array(5).fill({ id: 1 }) as any);
 

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { RedisService } from '../redis/redis.service.js';
 import { CreatePostDto } from './dto/create-post.dto.js';
 import { UpdatePostDto } from './dto/update-post.dto.js';
 import { QueryPostV2Dto } from './dto/query-post-v2.dto.js';
@@ -11,11 +12,15 @@ import { QueryPostV2Dto } from './dto/query-post-v2.dto.js';
  * ==============================================================================
  * รองรับการทำงานทั้ง API Version 1 (CRUD พื้นฐาน) และ Version 2 (Pagination, Metrics)
  * พร้อมระบบ Ownership Authorization (ผู้ใช้แก้ได้เฉพาะโพสต์ของตนเอง)
+ * และระบบ Redis Caching (Cache-Aside + Invalidation)
  * ==============================================================================
  */
 @Injectable()
 export class PostsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly redisService: RedisService,
+  ) {}
 
   // ═══════════════════════════════════════════════════════════
   // 🟢 V1 Methods (Standard CRUD)
@@ -44,7 +49,7 @@ export class PostsService {
     }
 
     // 3. บันทึกลงฐานข้อมูลและดึงข้อมูลสัมพันธ์ (Relations) กลับมา
-    return this.prisma.post.create({
+    const newPost = await this.prisma.post.create({
       data: {
         ...createPostDto,
         authorId,
@@ -65,6 +70,11 @@ export class PostsService {
         },
       },
     });
+
+    // 🧹 Cache Invalidation: ล้างแคชรายการบทความ v2 ทั้งหมดเพื่อให้ผู้ใช้เห็นโพสต์ใหม่ทันที
+    await this.redisService.delByPattern('posts:v2:*');
+
+    return newPost;
   }
 
   /**
@@ -173,7 +183,7 @@ export class PostsService {
       }
     }
 
-    return this.prisma.post.update({
+    const updatedPost = await this.prisma.post.update({
       where: { id },
       data: updatePostDto,
       include: {
@@ -192,6 +202,11 @@ export class PostsService {
         },
       },
     });
+
+    // 🧹 Cache Invalidation: ล้างแคชรายการบทความ v2 เมื่อข้อมูลถูกแก้ไข
+    await this.redisService.delByPattern('posts:v2:*');
+
+    return updatedPost;
   }
 
   /**
@@ -208,7 +223,7 @@ export class PostsService {
       throw new ForbiddenException('You can only delete your own posts');
     }
 
-    return this.prisma.post.delete({
+    const deletedPost = await this.prisma.post.delete({
       where: { id },
       include: {
         author: {
@@ -225,6 +240,11 @@ export class PostsService {
         },
       },
     });
+
+    // 🧹 Cache Invalidation: ล้างแคชรายการบทความ v2 เมื่อบทความถูกลบ
+    await this.redisService.delByPattern('posts:v2:*');
+
+    return deletedPost;
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -232,19 +252,43 @@ export class PostsService {
   // ═══════════════════════════════════════════════════════════
 
   /**
-   * 📄 V2: ดึงบทความแบบแบ่งหน้า (Pagination) พร้อมค้นหา (Search & Filter)
+   * 📄 V2: ดึงบทความแบบแบ่งหน้า (Pagination) พร้อมค้นหา (Search & Filter) + Redis Caching
    *
-   * 💡 ทำไม V2 ถึงดีกว่า V1?
-   * - ในระบบขนาดใหญ่ บทความอาจมีเป็นแสนบทความ การ return ทีเดียวทั้งหมดใน v1 จะทำให้ Server ล่ม
-   * - v2 ใช้ `skip` และ `take` เพื่อดึงเฉพาะชิ้นที่ต้องการตามหน้า (Page)
-   * - ส่ง `meta` กลับไปบอก Frontend ว่ามีทั้งหมดกี่หน้า และมีหน้าถัดไปหรือไม่
+   * 💡 Cache-Aside Pattern (Lazy Loading):
+   * 1. สร้าง Unique Cache Key ตาม parameter ทั้งหมด (page, limit, search, categoryId)
+   * 2. ตรวจสอบใน Redis Cache ก่อน (Cache Hit?):
+   *    - ถ้ามีข้อมูล -> คืนค่ากลับทันที (Response Time ระดับ < 5ms) โดยไม่ต้องต่อ Database
+   * 3. ถ้าไม่มีข้อมูลในแคช (Cache Miss):
+   *    - ทำการคิวรีฐานข้อมูล PostgreSQL ผ่าน Prisma
+   *    - บันทึกผลลัพธ์ลง Redis Cache พร้อมกำหนด TTL (Time-To-Live = 60 วินาที)
+   *    - คืนค่าผลลัพธ์ให้ไคลเอนต์
    */
   async findAllV2(query: QueryPostV2Dto) {
     const page = query.page && query.page > 0 ? query.page : 1;
     const limit = query.limit && query.limit > 0 ? query.limit : 10;
     const skip = (page - 1) * limit;
 
-    // สร้าง Where Clause แบบ Dynamic ตามเงื่อนไขที่ส่งเข้ามา
+    // 🔑 1. สร้าง Cache Key ตาม query parameters ที่ส่งเข้ามา
+    const cacheKey = `posts:v2:p${page}:l${limit}:s${query.search || ''}:c${query.categoryId || ''}`;
+
+    // ⚡ 2. ตรวจสอบ Cache Hit
+    const cachedData = await this.redisService.get<{
+      data: any[];
+      meta: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+        hasNextPage: boolean;
+        hasPreviousPage: boolean;
+      };
+    }>(cacheKey);
+
+    if (cachedData) {
+      return cachedData;
+    }
+
+    // 3. Cache Miss: สร้าง Where Clause แบบ Dynamic ตามเงื่อนไขที่ส่งเข้ามา
     const where: any = {};
 
     // ค้นหาข้อความใน Title หรือ Content (Case-Insensitive)
@@ -288,7 +332,7 @@ export class PostsService {
 
     const totalPages = Math.ceil(total / limit);
 
-    return {
+    const result = {
       data: posts,
       meta: {
         total,
@@ -299,6 +343,11 @@ export class PostsService {
         hasPreviousPage: page > 1,
       },
     };
+
+    // 💾 4. บันทึกผลลัพธ์ลง Redis ด้วย TTL 60 วินาที
+    await this.redisService.set(cacheKey, result, 60);
+
+    return result;
   }
 
   /**
