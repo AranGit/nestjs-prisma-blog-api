@@ -219,6 +219,26 @@ erDiagram
 
 ---
 
+## 🧪 การทำ Unit Testing ด้วย Vitest & Mocking
+
+โปรเจกต์นี้ตั้งค่า **Unit Testing** ด้วย **Vitest** และ **`vitest-mock-extended`** ครบถ้วน:
+- **Fast Execution**: รันเทสต์ได้เร็วมาก (เฉลี่ยไม่ถึง 0.5 วินาที)
+- **Deep Mocking**: ใช้ `mockDeep<PrismaClient>()` จำลอง Database ทั้งหมด ทำให้ทดสอบได้โดยไม่ต้องเชื่อมต่อฐานข้อมูลจริง
+- **AAA Pattern (Arrange - Act - Assert)**: โครงสร้างการเขียนเทสต์ที่เป็นระเบียบ อ่านง่าย
+
+```bash
+# 1. รัน Unit Test ทั้งหมด 22 ข้อ (Categories, Users, Posts)
+npm test
+
+# 2. รัน Test แบบ Watch Mode (จะเทสต์ใหม่อัตโนมัติเมื่อแก้โค้ด)
+npm run test:watch
+
+# 3. รัน Test พร้อมดูรายงาน Code Coverage
+npm run test:cov
+```
+
+---
+
 ## 🛠️ รายการคำสั่ง NPM Scripts (Useful Commands)
 
 | Command | หน้าที่ |
@@ -226,6 +246,9 @@ erDiagram
 | `npm run start:dev` | รัน Docker + Sync Schema + รัน NestJS Server ครบจบในคำสั่งเดียว |
 | `npm run start:dev:only` | รันเฉพาะ NestJS Server (กรณีที่ Database รันอยู่แล้ว) |
 | `npm run db:stop` | ปิด PostgreSQL Docker Container |
+| `npm test` | รัน Unit Tests ทั้งหมดด้วย Vitest |
+| `npm run test:watch` | รัน Unit Tests แบบโหมด Watch (Hot Reload Tests) |
+| `npm run test:cov` | ตรวจสอบ Code Coverage รายงานเปอร์เซ็นต์โค้ดที่ถูกทดสอบ |
 | `npx prisma studio` | เปิด Web GUI ดูและจัดการข้อมูลใน Database ด้วย Prisma Studio |
 | `npx prisma db push` | ซิงค์ Schema จาก `schema.prisma` ไปยัง Database โดยตรง |
 | `npm run build` | คอมไพล์โปรเจกต์ TypeScript เป็น JavaScript ในโฟลเดอร์ `dist/` |
