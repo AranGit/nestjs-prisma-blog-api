@@ -1,5 +1,7 @@
 # 📰 NestJS + Prisma + PostgreSQL Blog CMS API
 
+> 📖 **คู่มือเรียนรู้พื้นฐาน Backend ฉบับสมบูรณ์ (From Zero to Backend Dev)**: อ่านฉบับเต็มได้ที่ [docs/blog-api-guide.md](docs/blog-api-guide.md)
+
 ---
 
 ## 🌟 จุดเด่นของโปรเจกต์ (Key Features)
