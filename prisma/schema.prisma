@@ -38,6 +38,10 @@ model User {
   // ชื่อผู้ใช้งาน (Display name)
   name      String
 
+  // 🛡️ Role-Based Access Control: กำหนดบทบาทของผู้ใช้งาน (ADMIN หรือ AUTHOR)
+  // ค่าเริ่มต้นคือ AUTHOR เมื่อผู้ใช้สมัครสมาชิกใหม่
+  role      Role     @default(AUTHOR)
+
   // @default(now()): กำหนดเวลาปัจจุบันอัตโนมัติเมื่อสร้าง Record
   createdAt DateTime @default(now())
 
@@ -51,6 +55,14 @@ model User {
   // @@map: แมปชื่อ Model "User" ให้ตรงกับชื่อตารางจริงใน PostgreSQL เป็นตัวพิมพ์เล็ก "users"
   // Best Practice ใน PostgreSQL นิยมใช้ snake_case หรือ lowercase plural table names
   @@map("users")
+}
+
+// ==============================================================================
+// 🛡️ Enum: Role (บทบาทผู้ใช้งานในระบบ)
+// ==============================================================================
+enum Role {
+  ADMIN   // ผู้ดูแลระบบ: จัดการได้ทุกอย่าง (Users, Categories, Posts ของทุกคน)
+  AUTHOR  // นักเขียน: สร้างบทความ และแก้ไข/ลบได้เฉพาะบทความของตนเอง
 }
 
 // ==============================================================================

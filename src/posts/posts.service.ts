@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreatePostDto } from './dto/create-post.dto.js';
 import { UpdatePostDto } from './dto/update-post.dto.js';
@@ -9,15 +10,7 @@ import { QueryPostV2Dto } from './dto/query-post-v2.dto.js';
  * 📝 PostsService (Business Logic สำหรับบทความบล็อก)
  * ==============================================================================
  * รองรับการทำงานทั้ง API Version 1 (CRUD พื้นฐาน) และ Version 2 (Pagination, Metrics)
- *
- * 💡 Key Backend Concepts Demonstrated:
- * 1. Foreign Key Verification: ตรวจสอบความมีอยู่จริงของ Author และ Category ก่อนบันทึก
- * 2. Eager Loading / SQL Joins (`include`): ดึงข้อมูลข้ามตาราง (User, Category) ใน Query เดียว
- * 3. Parallel Database Queries (`Promise.all`): ยิง Query นับจำนวน (Count) และดึงข้อมูล (FindMany)
- *    พร้อมกัน เพื่อลดเวลา Response Time ของ API
- * 4. Pagination Formula:
- *    - `skip = (page - 1) * limit`
- *    - `take = limit`
+ * พร้อมระบบ Ownership Authorization (ผู้ใช้แก้ได้เฉพาะโพสต์ของตนเอง)
  * ==============================================================================
  */
 @Injectable()
@@ -30,17 +23,16 @@ export class PostsService {
 
   /**
    * ➕ สร้างบทความใหม่
-   * 1. ตรวจสอบว่ามีผู้ใช้นี้ (Author) อยู่จริงหรือไม่
-   * 2. ตรวจสอบว่ามีหมวดหมู่นี้ (Category) อยู่จริงหรือไม่
-   * 3. บันทึกบทความพร้อม join ข้อมูลชื่อผู้เขียนและชื่อหมวดหมู่ส่งกลับไป
+   * @param createPostDto ข้อมูลบทความ (title, content, categoryId)
+   * @param authorId ID ผู้เขียนที่สกัดได้จาก JWT Token
    */
-  async create(createPostDto: CreatePostDto) {
+  async create(createPostDto: CreatePostDto, authorId: number) {
     // 1. ตรวจสอบว่า Author ID มีตัวตนอยู่ในตาราง users
     const author = await this.prisma.user.findUnique({
-      where: { id: createPostDto.authorId },
+      where: { id: authorId },
     });
     if (!author) {
-      throw new NotFoundException(`User with ID ${createPostDto.authorId} not found`);
+      throw new NotFoundException(`User with ID ${authorId} not found`);
     }
 
     // 2. ตรวจสอบว่า Category ID มีตัวตนอยู่ในตาราง categories
@@ -53,7 +45,10 @@ export class PostsService {
 
     // 3. บันทึกลงฐานข้อมูลและดึงข้อมูลสัมพันธ์ (Relations) กลับมา
     return this.prisma.post.create({
-      data: createPostDto,
+      data: {
+        ...createPostDto,
+        authorId,
+      },
       include: {
         author: {
           select: {
@@ -152,10 +147,22 @@ export class PostsService {
 
   /**
    * ✏️ แก้ไขบทความ
-   * หากมีการเปลี่ยน categoryId ต้องตรวจสอบว่าหมวดหมู่ใหม่มีอยู่จริง
+   * ✏️ แก้ไขบทความ
+   * 💡 Ownership Authorization:
+   * - ผู้ใช้ที่เป็น ADMIN สามารถแก้ไขบทความของใครก็ได้
+   * - ผู้ใช้ที่เป็น AUTHOR สามารถแก้ไขได้เฉพาะบทความที่ตนเองเป็นผู้เขียนเท่านั้น
    */
-  async update(id: number, updatePostDto: UpdatePostDto) {
-    await this.findOne(id);
+  async update(
+    id: number,
+    updatePostDto: UpdatePostDto,
+    currentUser?: { id: number; role: Role },
+  ) {
+    const post = await this.findOne(id);
+
+    // ตรวจสอบสิทธิ์ความเป็นเจ้าของบทความ (Ownership check)
+    if (currentUser && currentUser.role !== Role.ADMIN && post.authorId !== currentUser.id) {
+      throw new ForbiddenException('You can only update your own posts');
+    }
 
     if (updatePostDto.categoryId) {
       const category = await this.prisma.category.findUnique({
@@ -189,9 +196,17 @@ export class PostsService {
 
   /**
    * 🗑️ ลบบทความตาม ID
+   * 💡 Ownership Authorization:
+   * - ADMIN ลบบทความใดก็ได้
+   * - AUTHOR ลบได้เฉพาะบทความของตนเอง
    */
-  async remove(id: number) {
-    await this.findOne(id);
+  async remove(id: number, currentUser?: { id: number; role: Role }) {
+    const post = await this.findOne(id);
+
+    // ตรวจสอบสิทธิ์ความเป็นเจ้าของบทความ
+    if (currentUser && currentUser.role !== Role.ADMIN && post.authorId !== currentUser.id) {
+      throw new ForbiddenException('You can only delete your own posts');
+    }
 
     return this.prisma.post.delete({
       where: { id },

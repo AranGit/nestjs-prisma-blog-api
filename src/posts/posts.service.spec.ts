@@ -62,13 +62,15 @@ describe('PostsService', () => {
       };
       prismaMock.post.create.mockResolvedValue(mockCreatedPost as any);
 
-      const result = await service.create({
-        title: 'Mastering NestJS',
-        content: 'Content here...',
-        isPublished: true,
-        authorId: 1,
-        categoryId: 2,
-      });
+      const result = await service.create(
+        {
+          title: 'Mastering NestJS',
+          content: 'Content here...',
+          isPublished: true,
+          categoryId: 2,
+        },
+        1, // authorId
+      );
 
       expect(result.id).toBe(10);
       expect(result.author.name).toBe('John Doe');
@@ -79,12 +81,14 @@ describe('PostsService', () => {
       prismaMock.user.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.create({
-          title: 'Post',
-          content: 'Content',
-          authorId: 999,
-          categoryId: 1,
-        }),
+        service.create(
+          {
+            title: 'Post',
+            content: 'Content',
+            categoryId: 1,
+          },
+          999, // invalid authorId
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -93,13 +97,78 @@ describe('PostsService', () => {
       prismaMock.category.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.create({
-          title: 'Post',
-          content: 'Content',
-          authorId: 1,
-          categoryId: 999,
-        }),
+        service.create(
+          {
+            title: 'Post',
+            content: 'Content',
+            categoryId: 999, // invalid categoryId
+          },
+          1,
+        ),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 2. V1 Test Suite: Ownership & Authorization (update / remove)
+  // ─────────────────────────────────────────────────────────────────────────────
+  describe('ownership & authorization', () => {
+    it('Author สามารถแก้ไขบทความของตัวเองได้', async () => {
+      const existingPost = {
+        id: 1,
+        title: 'My Post',
+        authorId: 10,
+        categoryId: 1,
+      };
+      prismaMock.post.findUnique.mockResolvedValue(existingPost as any);
+      prismaMock.post.update.mockResolvedValue({ ...existingPost, title: 'Updated' } as any);
+
+      const result = await service.update(
+        1,
+        { title: 'Updated' },
+        { id: 10, role: 'AUTHOR' as any }, // เจ้าของบทความ
+      );
+
+      expect(result.title).toBe('Updated');
+    });
+
+    it('Author ไม่สามารถแก้ไขบทความของคนอื่นได้ (โยน ForbiddenException)', async () => {
+      const existingPost = {
+        id: 1,
+        title: 'Other Post',
+        authorId: 10, // บทความของ User 10
+        categoryId: 1,
+      };
+      prismaMock.post.findUnique.mockResolvedValue(existingPost as any);
+
+      // User 99 (AUTHOR) พยายามมาแก้ไขบทความของ User 10
+      await expect(
+        service.update(
+          1,
+          { title: 'Hacked' },
+          { id: 99, role: 'AUTHOR' as any },
+        ),
+      ).rejects.toThrow();
+    });
+
+    it('Admin สามารถแก้ไขบทความของใครก็ได้', async () => {
+      const existingPost = {
+        id: 1,
+        title: 'Author Post',
+        authorId: 10,
+        categoryId: 1,
+      };
+      prismaMock.post.findUnique.mockResolvedValue(existingPost as any);
+      prismaMock.post.update.mockResolvedValue({ ...existingPost, title: 'Admin Fixed' } as any);
+
+      // User 99 เป็น ADMIN แก้ไขโพสต์ของ User 10
+      const result = await service.update(
+        1,
+        { title: 'Admin Fixed' },
+        { id: 99, role: 'ADMIN' as any },
+      );
+
+      expect(result.title).toBe('Admin Fixed');
     });
   });
 

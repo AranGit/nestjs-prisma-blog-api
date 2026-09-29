@@ -76,6 +76,19 @@ async function bootstrap() {
       '- **v2**: Enhanced endpoints with pagination, search, blog stats, and reading metrics (/api/v2/...)',
     )
     .setVersion('2.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter your JWT token (obtained from /api/v1/auth/login or register)',
+        in: 'header',
+      },
+      'JWT-auth', // default name
+    )
+    .addBearerAuth() // Standard default bearer auth
+    .addTag('Authentication', 'User authentication & JWT token generation (v1)')
     .addTag('Users', 'User management endpoints (v1)')
     .addTag('Categories', 'Category management endpoints (v1)')
     .addTag('Posts (v1)', 'Post management endpoints (v1)')

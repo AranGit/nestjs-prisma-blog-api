@@ -5,11 +5,14 @@
 ## 🌟 จุดเด่นของโปรเจกต์ (Key Features)
 
 - ⚡ **NestJS 12 (TypeScript & ES Modules)**: สถาปัตยกรรมระดับองค์กร (Enterprise Architecture) ที่มีระเบียบและสเกลง่าย
+- 🔒 **Authentication & JWT**: ระบบสมัครสมาชิก, เข้าสู่ระบบ และออก Access Token ด้วย Passport & JWT
+- 🛡️ **Role-Based Access Control (RBAC)**: แบ่งระดับสิทธิ์ผู้ใช้เป็น `ADMIN` และ `AUTHOR` พร้อมระบบปกป้องความเป็นเจ้าของบทความ (Ownership Protection)
+- 🔑 **Password Hashing (bcrypt)**: เข้ารหัสผ่านอย่างปลอดภัยก่อนบันทึกลง Database
 - 🐘 **PostgreSQL & Prisma 6 ORM**: Data Modeling ที่มี Type-Safety สูงสุด พร้อมความสัมพันธ์แบบ 1-to-Many
 - 🛡️ **DTO & Class Validation**: ป้องกันข้อมูลผิดพลาดและช่องโหว่ Mass Assignment ด้วย `class-validator`
 - 🎯 **URI API Versioning**: รองรับทั้ง `/api/v1` (CRUD ปกติ) และ `/api/v2` (Pagination, Metrics, Analytics)
 - 🚨 **Global Exception Filters**: ระบบดักจับ Error และแปลงเป็น JSON Format มาตรฐานเดียวกันทั้งระบบ
-- 📚 **Swagger (OpenAPI) Documentation**: มี Interactive Web UI สำหรับทดสอบ API ครบทุก Endpoint
+- 📚 **Swagger (OpenAPI) Documentation**: มี Interactive Web UI พร้อมปุ่ม **Authorize** สำหรับใส่ JWT Token
 - 🐳 **One-Command Dev Environment**: สคริปต์เปิด Docker PostgreSQL + ซิงค์ Prisma Schema + รัน Server อัตโนมัติ
 
 ---
@@ -135,24 +138,27 @@ erDiagram
 
 ### 🟢 Version 1 (`/api/v1`) — Standard CRUD
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/v1/users` | สร้างผู้ใช้งานใหม่ (Create user) |
-| `GET` | `/api/v1/users` | ดึงรายชื่อผู้ใช้ทั้งหมด (List all users) |
-| `GET` | `/api/v1/users/:id` | ดึงข้อมูลผู้ใช้รายบุคคลพร้อมบทความที่เขียน |
-| `PATCH` | `/api/v1/users/:id` | แก้ไขข้อมูลผู้ใช้ (Update user) |
-| `DELETE` | `/api/v1/users/:id` | ลบผู้ใช้ (Delete user & cascade posts) |
-| `POST` | `/api/v1/categories` | สร้างหมวดหมู่ใหม่ (Create category) |
-| `GET` | `/api/v1/categories` | ดึงหมวดหมู่ทั้งหมดพร้อมจำนวนบทความ (`_count`) |
-| `GET` | `/api/v1/categories/:id` | ดึงหมวดหมู่ตาม ID พร้อมบทความในหมวดหมู่ |
-| `PATCH` | `/api/v1/categories/:id` | แก้ไขชื่อหมวดหมู่ (Update category) |
-| `DELETE` | `/api/v1/categories/:id` | ลบหมวดหมู่ (Delete category - Restrict if has posts) |
-| `POST` | `/api/v1/posts` | สร้างบทความใหม่ (Create post) |
-| `GET` | `/api/v1/posts` | ดึงบทความทั้งหมดแบบ Flat Array |
-| `GET` | `/api/v1/posts/published` | ดึงเฉพาะบทความที่เผยแพร่แล้ว (`isPublished = true`) |
-| `GET` | `/api/v1/posts/:id` | ดึงบทความตาม ID พร้อมชื่อผู้เขียนและหมวดหมู่ |
-| `PATCH` | `/api/v1/posts/:id` | แก้ไขบทความ (Update post) |
-| `DELETE` | `/api/v1/posts/:id` | ลบบทความ (Delete post) |
+| Method | Endpoint | สิทธิ์การเข้าถึง (Access) | Description |
+|---|---|---|---|
+| `POST` | `/api/v1/auth/register` | Public | สมัครสมาชิกใหม่ (Register & get JWT) |
+| `POST` | `/api/v1/auth/login` | Public | เข้าสู่ระบบ (Login & get JWT) |
+| `GET` | `/api/v1/auth/profile` | 🔒 Authenticated | ดูโปรไฟล์ผู้ใช้ปัจจุบันจาก JWT |
+| `POST` | `/api/v1/users` | Public | สร้างผู้ใช้งาน (Create user) |
+| `GET` | `/api/v1/users` | Public | ดึงรายชื่อผู้ใช้ทั้งหมด (List all users) |
+| `GET` | `/api/v1/users/:id` | Public | ดึงข้อมูลผู้ใช้รายบุคคลพร้อมบทความที่เขียน |
+| `PATCH` | `/api/v1/users/:id` | Public | แก้ไขข้อมูลผู้ใช้ (Update user) |
+| `DELETE` | `/api/v1/users/:id` | Public | ลบผู้ใช้ (Delete user & cascade posts) |
+| `POST` | `/api/v1/categories` | 🛡️ **ADMIN only** | สร้างหมวดหมู่ใหม่ (Create category) |
+| `GET` | `/api/v1/categories` | Public | ดึงหมวดหมู่ทั้งหมดพร้อมจำนวนบทความ (`_count`) |
+| `GET` | `/api/v1/categories/:id` | Public | ดึงหมวดหมู่ตาม ID พร้อมบทความในหมวดหมู่ |
+| `PATCH` | `/api/v1/categories/:id` | 🛡️ **ADMIN only** | แก้ไขชื่อหมวดหมู่ (Update category) |
+| `DELETE` | `/api/v1/categories/:id` | 🛡️ **ADMIN only** | ลบหมวดหมู่ (Delete category - Restrict if has posts) |
+| `POST` | `/api/v1/posts` | 🔒 **Authenticated** | สร้างบทความ (ผูก `authorId` จาก Token อัตโนมัติ) |
+| `GET` | `/api/v1/posts` | Public | ดึงบทความทั้งหมดแบบ Flat Array |
+| `GET` | `/api/v1/posts/published` | Public | ดึงเฉพาะบทความที่เผยแพร่แล้ว (`isPublished = true`) |
+| `GET` | `/api/v1/posts/:id` | Public | ดึงบทความตาม ID พร้อมชื่อผู้เขียนและหมวดหมู่ |
+| `PATCH` | `/api/v1/posts/:id` | 🔒 **Owner / Admin** | แก้ไขบทความ (ผู้เขียนเดิม หรือ Admin) |
+| `DELETE` | `/api/v1/posts/:id` | 🔒 **Owner / Admin** | ลบบทความ (ผู้เขียนเดิม หรือ Admin) |
 
 ---
 
@@ -227,7 +233,7 @@ erDiagram
 - **AAA Pattern (Arrange - Act - Assert)**: โครงสร้างการเขียนเทสต์ที่เป็นระเบียบ อ่านง่าย
 
 ```bash
-# 1. รัน Unit Test ทั้งหมด 22 ข้อ (Categories, Users, Posts)
+# 1. รัน Unit Test ทั้งหมด 35 ข้อ (Auth, RolesGuard, Categories, Users, Posts)
 npm test
 
 # 2. รัน Test แบบ Watch Mode (จะเทสต์ใหม่อัตโนมัติเมื่อแก้โค้ด)

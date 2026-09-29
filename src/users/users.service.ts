@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
@@ -13,9 +14,10 @@ import { UpdateUserDto } from './dto/update-user.dto.js';
  * 1. Separation of Concerns (SoC):
  *    - Controller: รับ Request, Validate, และส่ง Response กลับ
  *    - Service: เขียน logic ทางธุรกิจจริงๆ เพื่อให้ reuse ใน CLI หรือ Queue ได้ง่าย
- * 2. Security (Data Masking):
+ * 2. Security (Data Masking & Hashing):
+ *    - รหัสผ่านจะถูกแฮชด้วย `bcrypt` ก่อนบันทึกลงฐานข้อมูลเสมอ
  *    - ⚠️ ห้ามส่ง field `password` กลับไปให้ Client เป็นอันขาด!
- *    - เราใช้ `select: { id, email, name, ... }` เพื่อเลือกเฉพาะฟิลด์ที่ปลอดภัยส่งกลับ
+ *    - เราใช้ `select: { id, email, name, role, ... }` เพื่อเลือกเฉพาะฟิลด์ที่ปลอดภัยส่งกลับ
  * 3. Exception Handling:
  *    - `ConflictException` (409): ใช้เมื่อพบข้อมูลซ้ำซ้อนที่ไม่สามารถสร้างได้ (เช่น Email ซ้ำ)
  *    - `NotFoundException` (404): ใช้เมื่อค้นหา Resource ด้วย ID แล้วไม่พบในระบบ
@@ -23,13 +25,15 @@ import { UpdateUserDto } from './dto/update-user.dto.js';
  */
 @Injectable()
 export class UsersService {
+  private readonly SALT_ROUNDS = 10;
+
   // Dependency Injection: NestJS จะสร้างและส่ง PrismaService เข้ามาให้ใน constructor โดยอัตโนมัติ
   constructor(private readonly prisma: PrismaService) {}
 
   /**
    * ➕ สร้างผู้ใช้ใหม่ (Create User)
    * 1. ตรวจสอบว่ามีอีเมลนี้ในระบบแล้วหรือไม่
-   * 2. หากมีแล้ว ให้โยน ConflictException (409)
+   * 2. แฮชรหัสผ่านด้วย bcrypt
    * 3. บันทึกข้อมูลลงฐานข้อมูลโดยตัด password ออกจากการตอบกลับ
    */
   async create(createUserDto: CreateUserDto) {
@@ -41,16 +45,21 @@ export class UsersService {
       throw new ConflictException('User with this email already exists');
     }
 
-    // 💡 สำหรับ Production: ควรเพิ่ม bcrypt.hash(createUserDto.password, 10) ก่อนบันทึก
+    // 🔒 แฮชรหัสผ่านก่อนบันทึกลง Database
+    const hashedPassword = await bcrypt.hash(createUserDto.password, this.SALT_ROUNDS);
+
     return this.prisma.user.create({
-      data: createUserDto,
+      data: {
+        ...createUserDto,
+        password: hashedPassword,
+      },
       select: {
         id: true,
         email: true,
         name: true,
+        role: true,
         createdAt: true,
         updatedAt: true,
-        // สังเกตว่าไม่มี password: true เพื่อความปลอดภัย
       },
     });
   }
@@ -64,6 +73,7 @@ export class UsersService {
         id: true,
         email: true,
         name: true,
+        role: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -81,6 +91,7 @@ export class UsersService {
         id: true,
         email: true,
         name: true,
+        role: true,
         createdAt: true,
         updatedAt: true,
         // Relation Query: ดึงบทความของผู้ใช้นี้มาด้วยพร้อมกัน
@@ -110,13 +121,19 @@ export class UsersService {
     // ตรวจสอบก่อนว่า User ID นี้มีอยู่จริงไหม (ถ้าไม่มีจะ throw NotFoundException 404 ทันที)
     await this.findOne(id);
 
+    const dataToUpdate: any = { ...updateUserDto };
+    if (updateUserDto.password) {
+      dataToUpdate.password = await bcrypt.hash(updateUserDto.password, this.SALT_ROUNDS);
+    }
+
     return this.prisma.user.update({
       where: { id },
-      data: updateUserDto,
+      data: dataToUpdate,
       select: {
         id: true,
         email: true,
         name: true,
+        role: true,
         createdAt: true,
         updatedAt: true,
       },

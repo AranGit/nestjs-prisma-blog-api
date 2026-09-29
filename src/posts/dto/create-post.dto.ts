@@ -6,14 +6,12 @@ import { Type } from 'class-transformer';
  * ==============================================================================
  * 📥 CreatePostDto (Data Transfer Object สำหรับสร้างบทความใหม่)
  * ==============================================================================
- * กำหนดข้อมูลที่จำเป็นต้องส่งเข้ามาเพื่อสร้างบทความลงในบล็อก
+ * กำหนดข้อมูลที่ Client ต้องส่งเข้ามาเพื่อสร้างบทความ
  *
- * 💡 Backend Concept:
- * 1. Foreign Key Validation:
- *    - `authorId` และ `categoryId` ต้องเป็นจำนวนเต็ม (`@IsInt()`)
- *    - `@Type(() => Number)`: ใช้ `class-transformer` บังคับแปลงค่าที่ส่งเข้ามาให้เป็นชนิดตัวเลข
- * 2. Default Values:
- *    - `isPublished`: เป็น optional หากผู้ใช้ไม่ส่งมาจะ default เป็น false ใน Database
+ * 💡 Backend Security Decision:
+ * - ⚠️ ไม่มีฟิลด์ `authorId` ใน Body อีกต่อไป!
+ * - `authorId` จะถูกดึงจาก JWT Token ของผู้ใช้ที่ล็อกอินอยู่โดยตรง (`req.user.id`)
+ * - ป้องกันช่องโหว่ที่ผู้ใช้พยายามส่ง authorId ของคนอื่นเพื่อแอบอ้างสร้างบทความในชื่อคนอื่น (Impersonation)
  * ==============================================================================
  */
 export class CreatePostDto {
@@ -32,11 +30,6 @@ export class CreatePostDto {
   @IsBoolean()
   @IsOptional()
   isPublished?: boolean;
-
-  @ApiProperty({ example: 1, description: 'Author User ID (Foreign Key to users table)' })
-  @IsInt()
-  @Type(() => Number)
-  authorId: number;
 
   @ApiProperty({ example: 1, description: 'Category ID (Foreign Key to categories table)' })
   @IsInt()
