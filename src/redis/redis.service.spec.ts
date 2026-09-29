@@ -3,7 +3,7 @@ import { RedisService } from './redis.service.js';
 
 /**
  * ==============================================================================
- * 🧪 Unit Tests: RedisService
+ * Unit Tests: RedisService
  * ==============================================================================
  * ทดสอบการทำงานของ Redis In-Memory Client Wrapper:
  * 1. get: การแปลง JSON deserialization เมื่อพบคีย์ และการคืนค่า null เมื่อไม่พบ

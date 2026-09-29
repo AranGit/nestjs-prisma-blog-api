@@ -8,12 +8,12 @@ import { Request, Response } from 'express';
 
 /**
  * ==============================================================================
- * 🚨 AllExceptionsFilter (Catch-All Exception Filter)
+ * AllExceptionsFilter (Catch-All Exception Filter)
  * ==============================================================================
  * ตาข่ายดักจับข้อผิดพลาดชั้นสุดท้าย (Last line of defense)
  * ดักจับข้อผิดพลาดทุกชนิดที่ไม่ได้สืบทอดมาจาก HttpException (เช่น Database Crash, Type Error, Unhandled Promise)
  *
- * 💡 Backend Concept:
+ * Backend Concept:
  * 1. `@Catch()` (ไม่มีพารามิเตอร์): ดักจับทุก Exception ที่หลุดรอดมาในระบบ
  * 2. Security & Information Hiding:
  *    - ใน Production เราไม่ควรส่ง Raw Error Stacktrace ให้ผู้ใช้เห็น เพราะอาจรั่วไหลข้อมูลสำคัญ (Database credentials, file paths)
@@ -33,7 +33,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const message = exception instanceof Error ? exception.message : 'Internal server error';
 
     // บันทึก Log ฝั่ง Server สำหรับการตรวจสอบและแก้ไขปัญหา
-    console.error('🔥 [Unhandled Exception]:', exception);
+    console.error('[Unhandled Exception]:', exception);
 
     // ส่งโครงสร้าง error แบบมาตรฐานเดียวกันกลับไปหา Client
     response.status(status).json({

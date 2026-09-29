@@ -1,5 +1,5 @@
 // ==============================================================================
-// 📌 Prisma Schema File (ไฟล์กำหนดโครงสร้างฐานข้อมูล)
+// Prisma Schema File (ไฟล์กำหนดโครงสร้างฐานข้อมูล)
 // ==============================================================================
 // Prisma Schema คือไฟล์ศูนย์กลางที่ใช้กำหนด Data Models, Relations, และ Database Provider
 // The central configuration for data models, database connection, and client generator.
@@ -20,7 +20,7 @@ datasource db {
 }
 
 // ==============================================================================
-// 👤 Model: User (ตารางผู้ใช้งาน)
+// Model: User (ตารางผู้ใช้งาน)
 // ==============================================================================
 // เก็บข้อมูลผู้ใช้ เช่น ผู้เขียนบทความ (Author)
 // Stores user account data who can author blog posts.
@@ -38,7 +38,7 @@ model User {
   // ชื่อผู้ใช้งาน (Display name)
   name      String
 
-  // 🛡️ Role-Based Access Control: กำหนดบทบาทของผู้ใช้งาน (ADMIN หรือ AUTHOR)
+  // Role-Based Access Control: กำหนดบทบาทของผู้ใช้งาน (ADMIN หรือ AUTHOR)
   // ค่าเริ่มต้นคือ AUTHOR เมื่อผู้ใช้สมัครสมาชิกใหม่
   role      Role     @default(AUTHOR)
 
@@ -58,7 +58,7 @@ model User {
 }
 
 // ==============================================================================
-// 🛡️ Enum: Role (บทบาทผู้ใช้งานในระบบ)
+// Enum: Role (บทบาทผู้ใช้งานในระบบ)
 // ==============================================================================
 enum Role {
   ADMIN   // ผู้ดูแลระบบ: จัดการได้ทุกอย่าง (Users, Categories, Posts ของทุกคน)
@@ -66,7 +66,7 @@ enum Role {
 }
 
 // ==============================================================================
-// 📝 Model: Post (ตารางบทความ)
+// Model: Post (ตารางบทความ)
 // ==============================================================================
 // เก็บบทความในบล็อก พร้อมความสัมพันธ์กับ User (Author) และ Category
 // Stores blog post content and links to its author and category.
@@ -82,7 +82,7 @@ model Post {
   updatedAt   DateTime @updatedAt
 
   // ---------------------------------------------------------------------------
-  // 🔗 Foreign Key & Relationship 1: User (Author)
+  // Foreign Key & Relationship 1: User (Author)
   // ---------------------------------------------------------------------------
   // authorId: Foreign Key ชี้ไปยัง User.id
   authorId   Int
@@ -94,7 +94,7 @@ model Post {
   author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   // ---------------------------------------------------------------------------
-  // 🔗 Foreign Key & Relationship 2: Category
+  // Foreign Key & Relationship 2: Category
   // ---------------------------------------------------------------------------
   // categoryId: Foreign Key ชี้ไปยัง Category.id
   categoryId Int
@@ -107,7 +107,7 @@ model Post {
 }
 
 // ==============================================================================
-// 🏷️ Model: Category (ตารางหมวดหมู่)
+// Model: Category (ตารางหมวดหมู่)
 // ==============================================================================
 // จัดกลุ่มประเภทของบทความ เช่น Tech, Lifestyle, Tutorial
 // Organizes blog posts into distinct categories.

@@ -117,18 +117,29 @@ erDiagram
 ### ตัวอย่าง: `CreatePostDto` (`src/posts/dto/create-post.dto.ts`)
 ```typescript
 export class CreatePostDto {
-  @ApiProperty({ example: 'NestJS Guide', description: 'Title' })
+  @ApiProperty({ example: 'Getting Started with NestJS', description: 'Post title', minLength: 3 })
   @IsString()
   @IsNotEmpty()
   @MinLength(3)
   title: string;
 
-  @ApiProperty({ example: 1, description: 'Author ID' })
+  @ApiProperty({ example: 'This is the content...', description: 'Full body content' })
+  @IsString()
+  @IsNotEmpty()
+  content: string;
+
+  @ApiPropertyOptional({ example: false, description: 'Whether the post is published or draft', default: false })
+  @IsBoolean()
+  @IsOptional()
+  isPublished?: boolean;
+
+  @ApiProperty({ example: 1, description: 'Category ID (Foreign Key)' })
   @IsInt()
   @Type(() => Number)
-  authorId: number;
+  categoryId: number;
 }
 ```
+> **Backend Security Decision**: สังเกตว่าใน `CreatePostDto` จะ**ไม่มีฟิลด์ `authorId`** เพื่อป้องกันการแฮกส่ง ID คนอื่น (Impersonation) โดยระบบจะดึง `authorId` จาก JWT Token ของผู้ใช้ที่ล็อกอินอยู่โดยตรง (`req.user.id`)
 
 ### ความปลอดภัยที่ได้จาก `ValidationPipe` ใน `src/main.ts`
 - `whitelist: true`: ตัดฟิลด์แปลกปลอมที่ Client แอบส่งมาทิ้ง ป้องกันการแฮกแก้ไขฟิลด์สำคัญ (Mass Assignment)
@@ -151,7 +162,7 @@ export class CreatePostDto {
   "path": "/api/v1/posts",
   "message": [
     "title must be longer than or equal to 3 characters",
-    "authorId must be an integer number"
+    "categoryId must be an integer number"
   ]
 }
 ```

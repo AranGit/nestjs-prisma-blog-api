@@ -3,12 +3,12 @@ import { PrismaClient } from '@prisma/client';
 
 /**
  * ==============================================================================
- * 🔌 PrismaService (Database Client Wrapper)
+ * PrismaService (Database Client Wrapper)
  * ==============================================================================
  * ทำหน้าที่เป็นสะพานเชื่อมต่อระหว่าง NestJS และ Prisma ORM
  * Acts as the bridge between NestJS dependency injection and Prisma Client.
  *
- * 💡 Backend Concept:
+ * Backend Concept:
  * 1. `@Injectable()`: ประกาศให้ Class นี้เป็น "Provider" ที่สามารถถูก Inject เข้าไป
  *    ใน Service หรือ Controller อื่นๆ ผ่าน Constructor ได้ (Dependency Injection / IoC)
  * 2. `extends PrismaClient`: สืบทอดความสามารถของ PrismaClient ทำให้ PrismaService

@@ -8,11 +8,11 @@ import { PrismaService } from '../prisma/prisma.service.js';
 
 /**
  * ==============================================================================
- * 🧪 Unit Tests: CategoriesService
+ * Unit Tests: CategoriesService
  * ==============================================================================
  * สอนการทำ Unit Testing สำหรับ Service ใน NestJS ด้วย Vitest และ Mocking
  *
- * 💡 Core Testing Concepts (หลักการสำคัญของการทดสอบ):
+ * Core Testing Concepts (หลักการสำคัญของการทดสอบ):
  * 1. Isolation (การแยกส่วนทดสอบ):
  *    - เราต้องการทดสอบ Business Logic ใน `CategoriesService` เท่านั้น
  *    - เราจึงไม่ต่อ Database จริง แต่ใช้ `mockDeep<PrismaClient>()` จำลองคำสั่ง Prisma

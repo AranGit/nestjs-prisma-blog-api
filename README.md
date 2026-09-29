@@ -18,7 +18,7 @@
 | **Validation & Serialization** | class-validator / class-transformer | Strict Whitelist & Type Casting |
 | **API Versioning** | URI-based Versioning | Default v1 with Advanced v2 Endpoints |
 | **API Documentation** | Swagger (OpenAPI 3.0) | Interactive Documentation with Bearer Auth |
-| **Automated Testing** | Vitest / vitest-mock-extended | 45 Unit Tests across 6 Test Suites (Deep Mocking) |
+| **Automated Testing** | Vitest / vitest-mock-extended | 46 Unit Tests across 6 Test Suites (Deep Mocking) |
 
 ---
 

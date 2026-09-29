@@ -8,11 +8,11 @@ import { RedisModule } from './redis/redis.module.js';
 
 /**
  * ==============================================================================
- * 🏛️ AppModule (Root Module / โมดูลหลักของแอปพลิเคชัน)
+ * AppModule (Root Module / โมดูลหลักของแอปพลิเคชัน)
  * ==============================================================================
  * ใน NestJS ทุกอย่างเริ่มต้นจาก Root Module ซึ่งเป็นจุดรวมศูนย์ของ Feature Modules ทั้งหมด
  *
- * 💡 Backend Architecture Concept:
+ * Backend Architecture Concept:
  * - NestJS ใช้แนวคิด Modular Architecture (สถาปัตยกรรมแบบแยกโมดูล)
  * - แต่ละโมดูลรับผิดชอบ Business Domain ของตัวเอง (Users, Categories, Posts, Auth, Redis)
  * - `PrismaModule`: โมดูลสำหรับจัดการการเชื่อมต่อฐานข้อมูล

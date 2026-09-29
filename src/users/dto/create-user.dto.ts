@@ -4,11 +4,11 @@ import { Role } from '@prisma/client';
 
 /**
  * ==============================================================================
- * 📥 CreateUserDto (Data Transfer Object สำหรับสร้างผู้ใช้ใหม่)
+ * CreateUserDto (Data Transfer Object สำหรับสร้างผู้ใช้ใหม่)
  * ==============================================================================
  * DTO คือ Object ที่ใช้กำหนดโครงสร้างและข้อกำหนดของข้อมูลที่ส่งเข้ามาทาง Request Body
  *
- * 💡 Backend Concept:
+ * Backend Concept:
  * 1. Data Contract: เป็นสัญญาตกลงระหว่าง Frontend และ Backend ว่า payload ต้องมีฟิลด์อะไรบ้าง
  * 2. Validation: ใช้ Decorator จาก `class-validator` เพื่อตรวจสอบความถูกต้องก่อนโค้ด Service จะทำงาน
  * 3. Swagger Integration: `@ApiProperty()` นำ metadata ไปสร้างเอกสารบน Swagger UI ให้อัตโนมัติ

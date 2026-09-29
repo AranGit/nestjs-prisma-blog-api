@@ -3,16 +3,16 @@ import { Redis } from 'ioredis';
 
 /**
  * ==============================================================================
- * ⚡ RedisService (In-Memory Data Store Client)
+ * RedisService (In-Memory Data Store Client)
  * ==============================================================================
  * จัดการการเชื่อมต่อและคำสั่งพื้นฐานกับ Redis เพื่อทำ Caching
  *
- * 💡 Backend Performance & Reliability Concepts:
+ * Backend Performance & Reliability Concepts:
  * 1. Cache-Aside Pattern:
  *    - `get<T>(key)`: ดึงข้อมูลจากแคช หากพบจะคืนค่าทันที (Cache Hit)
  *    - `set(key, val, ttl)`: บันทึกข้อมูลลงแคชพร้อมกำหนดเวลาหมดอายุ (TTL)
  * 2. Non-Blocking Invalidation (`delByPattern`):
- *    - ⚠️ ห้ามใช้คำสั่ง `KEYS *` ใน Production เด็ดขาด! เพราะ Redis ทำงานแบบ Single-Thread
+ *    - ห้ามใช้คำสั่ง `KEYS *` ใน Production เด็ดขาด! เพราะ Redis ทำงานแบบ Single-Thread
  *      คำสั่ง `KEYS *` จะบล็อก Server จนค้างหากมี Key หลักแสนตัว
  *    - เราใช้ `scanStream({ match: pattern })` ซึ่งเป็นคำสั่ง `SCAN` ทำงานแบบ Non-blocking
  *      ทยอยค้นหาและลบทีละ batch จึงปลอดภัยต่อ Production 100%
@@ -35,7 +35,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       retryStrategy: (times) => {
         // ลองเชื่อมต่อใหม่สูงสุด 5 ครั้ง ห่างกันครั้งละ 2 วินาที
         if (times > 5) {
-          this.logger.error('❌ Failed to connect to Redis after 5 retries');
+          this.logger.error('Failed to connect to Redis after 5 retries');
           return null;
         }
         return Math.min(times * 2000, 5000);
@@ -43,7 +43,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.client.on('connect', () => {
-      this.logger.log(`⚡ Connected to Redis on ${host}:${port}`);
+      this.logger.log(`Connected to Redis on ${host}:${port}`);
     });
 
     this.client.on('error', (err) => {
@@ -59,7 +59,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * 🔍 ดึงข้อมูลจากแคชตาม Key
+   * ดึงข้อมูลจากแคชตาม Key
    * @param key คีย์ที่ต้องการดึง
    * @returns ข้อมูลที่แปลงจาก JSON หรือ null หากไม่พบ
    */
@@ -75,7 +75,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * 💾 บันทึกข้อมูลลงแคช
+   * บันทึกข้อมูลลงแคช
    * @param key คีย์ที่ใช้เก็บ
    * @param value ข้อมูลที่ต้องการแคช (จะถูกแปลงเป็น JSON string)
    * @param ttlSeconds เวลาหมดอายุของแคช (วินาที)
@@ -94,7 +94,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * 🗑️ ลบแคชตาม Key ที่ระบุ
+   * ลบแคชตาม Key ที่ระบุ
    */
   async del(key: string): Promise<void> {
     try {
@@ -105,7 +105,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * 🧹 ล้างแคชทั้งหมดที่ตรงกับ Pattern (เช่น "posts:v2:*")
+   * ล้างแคชทั้งหมดที่ตรงกับ Pattern (เช่น "posts:v2:*")
    * ใช้ Redis SCAN Stream แบบ Non-blocking เพื่อความปลอดภัยใน Production
    */
   async delByPattern(pattern: string): Promise<void> {

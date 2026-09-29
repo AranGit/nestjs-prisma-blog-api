@@ -8,11 +8,11 @@ import { PrismaService } from '../prisma/prisma.service.js';
 
 /**
  * ==============================================================================
- * 🧪 Unit Tests: UsersService
+ * Unit Tests: UsersService
  * ==============================================================================
  * ทดสอบตรรกะทางธุรกิจของระบบจัดการผู้ใช้งาน
  *
- * 💡 Focus Areas:
+ * Focus Areas:
  * 1. Data Masking: ยืนยันว่าการตอบกลับไม่มีรหัสผ่าน (password) ติดไปด้วย
  * 2. Duplicate Email Prevention: ป้องกันการสมัครด้วยอีเมลซ้ำ
  * 3. Cascade/Relation Queries: การดึงบทความที่ผู้ใช้เป็นคนเขียน

@@ -19,12 +19,12 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 
 /**
  * ==============================================================================
- * 📝 PostsController (API Version 1: Standard CRUD)
+ * PostsController (API Version 1: Standard CRUD)
  * ==============================================================================
  * เส้นทาง Base URL: `/api/v1/posts`
  * ให้บริการ CRUD บทความแบบดั้งเดิม (ส่งค่ากลับเป็น Raw Array)
  *
- * 💡 Security & Authorization:
+ * Security & Authorization:
  * - `GET`: เปิด Public ให้ใครก็อ่านบทความได้
  * - `POST`: ต้องล็อกอิน (JWT) -> ระบบจะดึง authorId จาก Token อัตโนมัติ
  * - `PATCH`, `DELETE`: ต้องล็อกอิน -> Author แก้ได้เฉพาะโพสต์ของตัวเอง, Admin แก้ได้ทุกคน

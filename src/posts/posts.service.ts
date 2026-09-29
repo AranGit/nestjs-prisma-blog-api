@@ -8,7 +8,7 @@ import { QueryPostV2Dto } from './dto/query-post-v2.dto.js';
 
 /**
  * ==============================================================================
- * 📝 PostsService (Business Logic สำหรับบทความบล็อก)
+ * PostsService (Business Logic สำหรับบทความบล็อก)
  * ==============================================================================
  * รองรับการทำงานทั้ง API Version 1 (CRUD พื้นฐาน) และ Version 2 (Pagination, Metrics)
  * พร้อมระบบ Ownership Authorization (ผู้ใช้แก้ได้เฉพาะโพสต์ของตนเอง)
@@ -23,11 +23,11 @@ export class PostsService {
   ) {}
 
   // ═══════════════════════════════════════════════════════════
-  // 🟢 V1 Methods (Standard CRUD)
+  // V1 Methods (Standard CRUD)
   // ═══════════════════════════════════════════════════════════
 
   /**
-   * ➕ สร้างบทความใหม่
+   * สร้างบทความใหม่
    * @param createPostDto ข้อมูลบทความ (title, content, categoryId)
    * @param authorId ID ผู้เขียนที่สกัดได้จาก JWT Token
    */
@@ -71,14 +71,14 @@ export class PostsService {
       },
     });
 
-    // 🧹 Cache Invalidation: ล้างแคชรายการบทความ v2 ทั้งหมดเพื่อให้ผู้ใช้เห็นโพสต์ใหม่ทันที
+    // Cache Invalidation: ล้างแคชรายการบทความ v2 ทั้งหมดเพื่อให้ผู้ใช้เห็นโพสต์ใหม่ทันที
     await this.redisService.delByPattern('posts:v2:*');
 
     return newPost;
   }
 
   /**
-   * 📋 ดึงบทความทั้งหมด (V1: คืนค่าเป็น Raw Array เรียงจากใหม่ไปเก่า)
+   * ดึงบทความทั้งหมด (V1: คืนค่าเป็น Raw Array เรียงจากใหม่ไปเก่า)
    */
   async findAll() {
     return this.prisma.post.findMany({
@@ -102,7 +102,7 @@ export class PostsService {
   }
 
   /**
-   * 🔍 ค้นหาบทความตาม ID
+   * ค้นหาบทความตาม ID
    */
   async findOne(id: number) {
     const post = await this.prisma.post.findUnique({
@@ -132,7 +132,7 @@ export class PostsService {
   }
 
   /**
-   * 🌐 ดึงเฉพาะบทความที่เผยแพร่แล้ว (isPublished = true)
+   * ดึงเฉพาะบทความที่เผยแพร่แล้ว (isPublished = true)
    */
   async findPublished() {
     return this.prisma.post.findMany({
@@ -156,9 +156,8 @@ export class PostsService {
   }
 
   /**
-   * ✏️ แก้ไขบทความ
-   * ✏️ แก้ไขบทความ
-   * 💡 Ownership Authorization:
+   * แก้ไขบทความ
+   * Ownership Authorization:
    * - ผู้ใช้ที่เป็น ADMIN สามารถแก้ไขบทความของใครก็ได้
    * - ผู้ใช้ที่เป็น AUTHOR สามารถแก้ไขได้เฉพาะบทความที่ตนเองเป็นผู้เขียนเท่านั้น
    */
@@ -203,15 +202,15 @@ export class PostsService {
       },
     });
 
-    // 🧹 Cache Invalidation: ล้างแคชรายการบทความ v2 เมื่อข้อมูลถูกแก้ไข
+    // Cache Invalidation: ล้างแคชรายการบทความ v2 เมื่อข้อมูลถูกแก้ไข
     await this.redisService.delByPattern('posts:v2:*');
 
     return updatedPost;
   }
 
   /**
-   * 🗑️ ลบบทความตาม ID
-   * 💡 Ownership Authorization:
+   * ลบบทความตาม ID
+   * Ownership Authorization:
    * - ADMIN ลบบทความใดก็ได้
    * - AUTHOR ลบได้เฉพาะบทความของตนเอง
    */
@@ -241,20 +240,20 @@ export class PostsService {
       },
     });
 
-    // 🧹 Cache Invalidation: ล้างแคชรายการบทความ v2 เมื่อบทความถูกลบ
+    // Cache Invalidation: ล้างแคชรายการบทความ v2 เมื่อบทความถูกลบ
     await this.redisService.delByPattern('posts:v2:*');
 
     return deletedPost;
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🚀 V2 Methods (Pagination, Search, Analytics & Metrics)
+  // V2 Methods (Pagination, Search, Analytics & Metrics)
   // ═══════════════════════════════════════════════════════════
 
   /**
-   * 📄 V2: ดึงบทความแบบแบ่งหน้า (Pagination) พร้อมค้นหา (Search & Filter) + Redis Caching
+   * V2: ดึงบทความแบบแบ่งหน้า (Pagination) พร้อมค้นหา (Search & Filter) + Redis Caching
    *
-   * 💡 Cache-Aside Pattern (Lazy Loading):
+   * Cache-Aside Pattern (Lazy Loading):
    * 1. สร้าง Unique Cache Key ตาม parameter ทั้งหมด (page, limit, search, categoryId)
    * 2. ตรวจสอบใน Redis Cache ก่อน (Cache Hit?):
    *    - ถ้ามีข้อมูล -> คืนค่ากลับทันที (Response Time ระดับ < 5ms) โดยไม่ต้องต่อ Database
@@ -268,10 +267,10 @@ export class PostsService {
     const limit = query.limit && query.limit > 0 ? query.limit : 10;
     const skip = (page - 1) * limit;
 
-    // 🔑 1. สร้าง Cache Key ตาม query parameters ที่ส่งเข้ามา
+    // 1. สร้าง Cache Key ตาม query parameters ที่ส่งเข้ามา
     const cacheKey = `posts:v2:p${page}:l${limit}:s${query.search || ''}:c${query.categoryId || ''}`;
 
-    // ⚡ 2. ตรวจสอบ Cache Hit
+    // 2. ตรวจสอบ Cache Hit
     const cachedData = await this.redisService.get<{
       data: any[];
       meta: {
@@ -304,7 +303,7 @@ export class PostsService {
       where.categoryId = query.categoryId;
     }
 
-    // ⚡ Performance Optimization: ใช้ Promise.all รัน Query 2 ตัวพร้อมกันในระดับ Database
+    // Performance Optimization: ใช้ Promise.all รัน Query 2 ตัวพร้อมกันในระดับ Database
     const [total, posts] = await Promise.all([
       this.prisma.post.count({ where }),
       this.prisma.post.findMany({
@@ -344,14 +343,14 @@ export class PostsService {
       },
     };
 
-    // 💾 4. บันทึกผลลัพธ์ลง Redis ด้วย TTL 60 วินาที
+    // 4. บันทึกผลลัพธ์ลง Redis ด้วย TTL 60 วินาที
     await this.redisService.set(cacheKey, result, 60);
 
     return result;
   }
 
   /**
-   * ⏱️ V2: ดึงบทความเดี่ยวพร้อมคำนวณเวลาอ่าน (Reading Time) และบทความที่เกี่ยวข้อง (Related Posts)
+   * V2: ดึงบทความเดี่ยวพร้อมคำนวณเวลาอ่าน (Reading Time) และบทความที่เกี่ยวข้อง (Related Posts)
    */
   async findOneV2(id: number) {
     const post = await this.findOne(id);
@@ -384,7 +383,7 @@ export class PostsService {
   }
 
   /**
-   * 📊 V2: ดึงสถิติภาพรวมของบล็อก (Analytics Summary)
+   * V2: ดึงสถิติภาพรวมของบล็อก (Analytics Summary)
    * ใช้สำหรับการแสดงผลบน Dashboard ของผู้ดูแลระบบ
    */
   async getStatsV2() {

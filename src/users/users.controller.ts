@@ -20,11 +20,11 @@ import { Roles } from '../auth/decorators/roles.decorator.js';
 
 /**
  * ==============================================================================
- * 🌐 UsersController (HTTP Presentation Layer / ชั้นรับส่งคำขอ HTTP)
+ * UsersController (HTTP Presentation Layer / ชั้นรับส่งคำขอ HTTP)
  * ==============================================================================
  * ทำหน้าที่รับ HTTP Request จาก Client, นำพาข้อมูลเข้าสู่การ Validate และส่งต่อให้ Service
  *
- * 💡 RBAC Authorization Rules:
+ * RBAC Authorization Rules:
  * - `POST /users`: เฉพาะ ADMIN (Admin User Provisioning) ส่วนคนทั่วไปใช้ `/auth/register`
  * - `GET /users`, `GET /users/:id`: ดูข้อมูลผู้ใช้
  * - `PATCH /users/:id`: แก้ไขข้อมูลผู้ใช้

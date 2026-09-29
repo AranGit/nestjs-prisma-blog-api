@@ -4,11 +4,11 @@ import { Type } from 'class-transformer';
 
 /**
  * ==============================================================================
- * 📝 UpdatePostDto (Data Transfer Object สำหรับแก้ไขบทความ)
+ * UpdatePostDto (Data Transfer Object สำหรับแก้ไขบทความ)
  * ==============================================================================
  * รองรับการแก้ไขเนื้อหา, หัวข้อ, สถานะเผยแพร่ หรือย้ายหมวดหมู่
  *
- * 💡 Backend Security & Design Decision:
+ * Backend Security & Design Decision:
  * 1. ไม่อนุญาตให้แก้ไข `authorId` ใน DTO นี้!
  *    - ผู้เขียนเดิมไม่ควรถูกเปลี่ยนมั่วซั่วจากการเรียก API ทั่วไป
  *    - หากระบบต้องการโอนความเป็นเจ้าของบทความ (Transfer Ownership) ควรสร้่าง Endpoint แยกเฉพาะทางพร้อมสิทธิ์ Admin

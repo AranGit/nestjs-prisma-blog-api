@@ -9,11 +9,11 @@ import { Role } from '@prisma/client';
 
 /**
  * ==============================================================================
- * 🧠 AuthService (Authentication & Security Business Logic)
+ * AuthService (Authentication & Security Business Logic)
  * ==============================================================================
  * ดูแลความปลอดภัยของระบบ: การแฮชรหัสผ่าน, การตรวจสอบสิทธิ์ และการออก JWT Token
  *
- * 💡 Backend Security Best Practices Demonstrated:
+ * Backend Security Best Practices Demonstrated:
  * 1. Password Hashing (bcrypt):
  *    - ใช้ Salt Rounds = 10 (มาตรฐานความปลอดภัยที่ทนทานต่อ Brute-Force Attacks)
  *    - รหัสผ่านตัวจริง (Plain text) จะไม่มีวันถูกบันทึกหรือหลุดไปที่ใดเด็ดขาด
@@ -36,7 +36,7 @@ export class AuthService {
   ) {}
 
   /**
-   * ➕ สมัครสมาชิกใหม่ (Register)
+   * สมัครสมาชิกใหม่ (Register)
    */
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
     const { email, password, name, role } = registerDto;
@@ -79,7 +79,7 @@ export class AuthService {
   }
 
   /**
-   * 🔑 เข้าสู่ระบบ (Login)
+   * เข้าสู่ระบบ (Login)
    */
   async login(loginDto: LoginDto): Promise<AuthResponseDto> {
     const { email, password } = loginDto;
@@ -115,7 +115,7 @@ export class AuthService {
   }
 
   /**
-   * 👤 ดึงข้อมูลโปรไฟล์ผู้ใช้งาน
+   * ดึงข้อมูลโปรไฟล์ผู้ใช้งาน
    */
   async getProfile(userId: number) {
     const user = await this.prisma.user.findUnique({
@@ -137,7 +137,7 @@ export class AuthService {
   }
 
   /**
-   * 🛠️ Helper Method สำหรับเซ็นลายเซ็นสร้าง JWT Token
+   * Helper Method สำหรับเซ็นลายเซ็นสร้าง JWT Token
    */
   private async generateToken(userId: number, email: string, role: Role): Promise<string> {
     const payload = {

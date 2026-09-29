@@ -3,11 +3,11 @@ import { User } from '@prisma/client';
 
 /**
  * ==============================================================================
- * 👤 @CurrentUser(data?: keyof User) Decorator
+ * @CurrentUser(data?: keyof User) Decorator
  * ==============================================================================
  * Parameter Decorator สำหรับดึงข้อมูล User ปัจจุบันที่ผ่านการยืนยันตัวตน (JWT) แล้ว
  *
- * 💡 ตัวอย่างการใช้งานใน Controller:
+ * ตัวอย่างการใช้งานใน Controller:
  * 1. ดึง User ทั้งหมด:
  *    `@Get('profile')`
  *    `getProfile(@CurrentUser() user: User) { return user; }`

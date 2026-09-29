@@ -11,14 +11,14 @@ import { QueryPostV2Dto } from './dto/query-post-v2.dto.js';
 
 /**
  * ==============================================================================
- * 🚀 PostsV2Controller (API Version 2: Advanced Endpoints)
+ * PostsV2Controller (API Version 2: Advanced Endpoints)
  * ==============================================================================
  * เส้นทาง Base URL: `/api/v2/posts`
  * นำเสนอฟีเจอร์ขั้นสูงสำหรับบทความ เช่น การแบ่งหน้า (Pagination), ค้นหา (Search),
  * สถิติภาพรวม (Analytics) และข้อมูลคำนวณเวลาในการอ่าน (Reading Time)
  *
- * 💡 Critical Backend Concept: Route Order / Route Precedence (ลำดับความสำคัญของ Route)
- * ⚠️ สังเกตว่า `@Get('stats')` ต้องประกาศ "ก่อน" `@Get(':id')` เสมอ!
+ * Critical Backend Concept: Route Order / Route Precedence (ลำดับความสำคัญของ Route)
+ * สังเกตว่า `@Get('stats')` ต้องประกาศ "ก่อน" `@Get(':id')` เสมอ!
  * เหตุผล:
  * - ถ้าประกาศ `@Get(':id')` ก่อน เมื่อมีคำขอมาที่ `/posts/stats` Express/NestJS จะมองว่า
  *   คำว่า "stats" คือค่าพารามิเตอร์ `:id` และพยายามแปลงเป็นตัวเลขด้วย `ParseIntPipe`

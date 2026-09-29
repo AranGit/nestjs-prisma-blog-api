@@ -95,7 +95,7 @@ flowchart TD
   1. [`src/auth/auth.service.ts`](../src/auth/auth.service.ts) - การใช้ `bcrypt.hash` ตอนสมัครสมาชิก และ `bcrypt.compare` + `jwtService.sign` ตอนเข้าสู่ระบบ
   2. [`src/auth/strategies/jwt.strategy.ts`](../src/auth/strategies/jwt.strategy.ts) - Passport Strategy สกัด Bearer Token และดึง User Profile มาเก็บใน `req.user`
   3. [`src/auth/guards/roles.guard.ts`](../src/auth/guards/roles.guard.ts) - Guard ตรวจสอบ Metadata จาก `@Roles()` กับ Role ของผู้ใช้ปัจจุบัน
-  4. [`src/common/decorators/current-user.decorator.ts`](../src/common/decorators/current-user.decorator.ts) - Custom Parameter Decorator ดึง User สะอาดตา
+  4. [`src/auth/decorators/current-user.decorator.ts`](../src/auth/decorators/current-user.decorator.ts) - Custom Parameter Decorator ดึง User สะอาดตา
 * **[KEY ARCHITECTURAL CONCEPTS]**:
   - ข้อแตกต่างระหว่าง Authentication (ระบุตัวตน) กับ Authorization (ตรวจสอบสิทธิ์)
   - ทำไมไม่ควรเก็บข้อมูล Sensitive เช่น รหัสผ่าน ไว้ใน JWT Payload
@@ -159,7 +159,7 @@ flowchart TD
   - โครงสร้าง AAA (Arrange - Act - Assert)
   - ประโยชน์ของ In-Memory Mocking: เทสต์รันได้รวดเร็ว (< 1 วินาที) โดยไม่ต้องเปิด Docker หรือต่อ Network จริง
 * **[CHECKPOINT]**:
-  - รัน `npm test` และยืนยันว่าการทดสอบทั้ง 45 ข้อผ่านทั้งหมด 100%
+  - รัน `npm test` และยืนยันว่าการทดสอบทั้ง 46 ข้อผ่านทั้งหมด 100%
 
 ---
 
@@ -175,7 +175,7 @@ flowchart TD
 | **Authorization** | อธิบายความต่างระหว่าง Role-Based (Admin/Author) กับ Resource Ownership ได้ | [ ] |
 | **Performance** | อธิบายหลักการ Pagination, Concurrency ด้วย `Promise.all` ได้ | [ ] |
 | **Caching** | อธิบาย Cache-Aside, TTL, และเหตุผลที่ห้ามใช้ `KEYS *` ใน Production ได้ | [ ] |
-| **Software Quality** | อธิบายหลักการ Deep Mocking และรัน Unit Test 45 ข้อผ่านครบถ้วนได้ | [ ] |
+| **Software Quality** | อธิบายหลักการ Deep Mocking และรัน Unit Test 46 ข้อผ่านครบถ้วนได้ | [ ] |
 
 ---
 

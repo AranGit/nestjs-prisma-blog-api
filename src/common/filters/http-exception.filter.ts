@@ -9,12 +9,12 @@ import { Request, Response } from 'express';
 
 /**
  * ==============================================================================
- * 🛡️ HttpExceptionFilter (Custom Global Exception Filter)
+ * HttpExceptionFilter (Custom Global Exception Filter)
  * ==============================================================================
  * ดักจับเฉพาะข้อผิดพลาดที่เป็นชนิด `HttpException` (เช่น 400 Bad Request, 404 Not Found, 409 Conflict)
  * เพื่อแปลงรูปแบบ Error Response ให้เป็นมาตรฐานเดียวกันทั้งระบบ (Standardized Error Schema)
  *
- * 💡 Backend Concept:
+ * Backend Concept:
  * 1. `@Catch(HttpException)`: ตัวตกแต่งที่บอก NestJS ว่า Filter นี้สนใจเฉพาะ Error ที่เป็น HttpException
  * 2. `ArgumentsHost`: ออบเจ็กต์สากลของ NestJS ที่เก็บ Execution Context ไม่ว่าจะเป็น HTTP, WebSocket หรือ Microservice
  *    - `host.switchToHttp()`: เปลี่ยน context ให้เข้าถึง request และ response ของ HTTP ได้

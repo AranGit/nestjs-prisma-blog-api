@@ -9,12 +9,12 @@ import { RedisService } from '../redis/redis.service.js';
 
 /**
  * ==============================================================================
- * 🧪 Unit Tests: PostsService (V1 & V2)
+ * Unit Tests: PostsService (V1 & V2)
  * ==============================================================================
  * ทดสอบทั้ง V1 CRUD และ V2 Advanced Logic (Pagination, Reading Time, Stats)
  * พร้อมทดสอบระบบ Redis Caching (Cache-Aside & Cache Invalidation)
  *
- * 💡 Focus Areas:
+ * Focus Areas:
  * 1. Foreign Key Verification: ตรวจสอบ Author และ Category ก่อน Create
  * 2. V2 Pagination Metadata: ทดสอบการคำนวณ totalPages, hasNextPage, hasPreviousPage
  * 3. V2 Calculated Attributes: ทดสอบการคำนวณ readingTimeMinutes จากจำนวนคำ
@@ -230,7 +230,7 @@ describe('PostsService', () => {
   // 3. V2 Test Suite: findAllV2() (Pagination, Search & Redis Caching)
   // ─────────────────────────────────────────────────────────────────────────────
   describe('findAllV2 (v2)', () => {
-    it('⚡ Cache Hit: ควรคืนค่าจาก Redis Cache ทันทีโดยไม่ต้องคิวรี Prisma', async () => {
+    it('Cache Hit: ควรคืนค่าจาก Redis Cache ทันทีโดยไม่ต้องคิวรี Prisma', async () => {
       const cachedResult = {
         data: [{ id: 1, title: 'Cached Post' }],
         meta: {
@@ -256,7 +256,7 @@ describe('PostsService', () => {
       expect(prismaMock.post.count).not.toHaveBeenCalled();
     });
 
-    it('⚡ Cache Miss: ควรคิวรีฐานข้อมูลและบันทึกลง Redis Cache ด้วย TTL 60 วินาที', async () => {
+    it('Cache Miss: ควรคิวรีฐานข้อมูลและบันทึกลง Redis Cache ด้วย TTL 60 วินาที', async () => {
       // จำลองว่า Redis แคชว่างเปล่า (Cache Miss)
       redisServiceMock.get.mockResolvedValue(null);
 

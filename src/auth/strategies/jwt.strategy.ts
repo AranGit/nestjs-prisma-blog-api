@@ -12,11 +12,11 @@ export interface JwtPayload {
 
 /**
  * ==============================================================================
- * 🔑 JwtStrategy (Passport Strategy สำหรับถอดรหัสและตรวจสอบ JWT)
+ * JwtStrategy (Passport Strategy สำหรับถอดรหัสและตรวจสอบ JWT)
  * ==============================================================================
  * Passport จะเรียกใช้ Strategy นี้เมื่อมี Request วิ่งผ่าน `JwtAuthGuard`
  *
- * 💡 Backend Concept:
+ * Backend Concept:
  * 1. `jwtFromRequest`: ดึง Token จาก `Authorization: Bearer <token>`
  * 2. `secretOrKey`: คีย์ลับที่ใช้ Verify ลายเซ็นดิจิทัล (Digital Signature) ของ Token
  * 3. `validate(payload)`: ทำงานหลังจาก Token ผ่านการ Verify ลายเซ็นแล้ว

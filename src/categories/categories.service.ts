@@ -5,11 +5,11 @@ import { UpdateCategoryDto } from './dto/update-category.dto.js';
 
 /**
  * ==============================================================================
- * 🏷️ CategoriesService (Business Logic สำหรับหมวดหมู่บทความ)
+ * CategoriesService (Business Logic สำหรับหมวดหมู่บทความ)
  * ==============================================================================
  * จัดการสร้าง, ค้นหา, แก้ไข และลบหมวดหมู่บทความในบล็อก
  *
- * 💡 Backend Concept:
+ * Backend Concept:
  * 1. Database Aggregation (`_count`):
  *    - เมื่อดึงหมวดหมู่ทั้งหมด แทนที่จะดึงโพสต์ทั้งหมดขึ้นมานับใน JavaScript (ซึ่งเปลือง RAM)
  *    - เราใช้ `_count: { select: { posts: true } }` เพื่อให้ SQL รันคำสั่ง `COUNT(*)` ฝั่ง Database
@@ -25,7 +25,7 @@ export class CategoriesService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * ➕ สร้างหมวดหมู่ใหม่
+   * สร้างหมวดหมู่ใหม่
    */
   async create(createCategoryDto: CreateCategoryDto) {
     // ตรวจสอบว่าชื่อหมวดหมู่นี้ซ้ำกับที่มีอยู่แล้วหรือไม่
@@ -43,7 +43,7 @@ export class CategoriesService {
   }
 
   /**
-   * 📋 ดึงรายชื่อหมวดหมู่ทั้งหมด เรียงตามตัวอักษร พร้อมจำนวนบทความในแต่ละหมวดหมู่
+   * ดึงรายชื่อหมวดหมู่ทั้งหมด เรียงตามตัวอักษร พร้อมจำนวนบทความในแต่ละหมวดหมู่
    */
   async findAll() {
     return this.prisma.category.findMany({
@@ -59,7 +59,7 @@ export class CategoriesService {
   }
 
   /**
-   * 🔍 ดึงข้อมูลหมวดหมู่รายอัน พร้อมรายการบทความที่สังกัดในหมวดหมู่นี้
+   * ดึงข้อมูลหมวดหมู่รายอัน พร้อมรายการบทความที่สังกัดในหมวดหมู่นี้
    */
   async findOne(id: number) {
     const category = await this.prisma.category.findUnique({
@@ -84,7 +84,7 @@ export class CategoriesService {
   }
 
   /**
-   * ✏️ แก้ไขชื่อหมวดหมู่
+   * แก้ไขชื่อหมวดหมู่
    */
   async update(id: number, updateCategoryDto: UpdateCategoryDto) {
     // 1. ตรวจสอบว่าหมวดหมู่เดิมมีอยู่จริงไหม
@@ -108,8 +108,8 @@ export class CategoriesService {
   }
 
   /**
-   * 🗑️ ลบหมวดหมู่
-   * ⚠️ หากหมวดหมู่นี้มีบทความอยู่ จะไม่สามารถลบได้เนื่องจากติด Foreign Key Restrict
+   * ลบหมวดหมู่
+   * หากหมวดหมู่นี้มีบทความอยู่ จะไม่สามารถลบได้เนื่องจากติด Foreign Key Restrict
    */
   async remove(id: number) {
     await this.findOne(id);

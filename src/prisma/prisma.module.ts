@@ -3,11 +3,11 @@ import { PrismaService } from './prisma.service.js';
 
 /**
  * ==============================================================================
- * 📦 PrismaModule (Global Database Module)
+ * PrismaModule (Global Database Module)
  * ==============================================================================
  * โมดูลกลางสำหรับให้บริการเชื่อมต่อฐานข้อมูลทั่วทั้งระบบ
  *
- * 💡 Backend Concept:
+ * Backend Concept:
  * 1. `@Global()`: ทำให้ Module นี้เป็น Global Scope
  *    - ปกติใน NestJS เมื่อโมดูลใดต้องการใช้ Service จากอีกโมดูล จะต้องเขียน `imports: [ModuleA]` ในทุกๆ โมดูล
  *    - แต่เมื่อใส่ `@Global()` และ import ใน AppModule เพียงครั้งเดียว โมดูลอื่นๆ (เช่น UsersModule, PostsModule)

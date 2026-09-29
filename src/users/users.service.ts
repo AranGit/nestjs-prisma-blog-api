@@ -6,17 +6,17 @@ import { UpdateUserDto } from './dto/update-user.dto.js';
 
 /**
  * ==============================================================================
- * 🧠 UsersService (Business Logic Layer / ชั้นตรรกะทางธุรกิจ)
+ * UsersService (Business Logic Layer / ชั้นตรรกะทางธุรกิจ)
  * ==============================================================================
  * ทำหน้าที่ประมวลผลข้อมูล ตรวจสอบเงื่อนไขทางธุรกิจ และเรียกใช้งาน Prisma ORM
  *
- * 💡 Backend Architecture Concept:
+ * Backend Architecture Concept:
  * 1. Separation of Concerns (SoC):
  *    - Controller: รับ Request, Validate, และส่ง Response กลับ
  *    - Service: เขียน logic ทางธุรกิจจริงๆ เพื่อให้ reuse ใน CLI หรือ Queue ได้ง่าย
  * 2. Security (Data Masking & Hashing):
  *    - รหัสผ่านจะถูกแฮชด้วย `bcrypt` ก่อนบันทึกลงฐานข้อมูลเสมอ
- *    - ⚠️ ห้ามส่ง field `password` กลับไปให้ Client เป็นอันขาด!
+ *    - ห้ามส่ง field `password` กลับไปให้ Client เป็นอันขาด!
  *    - เราใช้ `select: { id, email, name, role, ... }` เพื่อเลือกเฉพาะฟิลด์ที่ปลอดภัยส่งกลับ
  * 3. Exception Handling:
  *    - `ConflictException` (409): ใช้เมื่อพบข้อมูลซ้ำซ้อนที่ไม่สามารถสร้างได้ (เช่น Email ซ้ำ)
@@ -31,7 +31,7 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * ➕ สร้างผู้ใช้ใหม่ (Create User)
+   * สร้างผู้ใช้ใหม่ (Create User)
    * 1. ตรวจสอบว่ามีอีเมลนี้ในระบบแล้วหรือไม่
    * 2. แฮชรหัสผ่านด้วย bcrypt
    * 3. บันทึกข้อมูลลงฐานข้อมูลโดยตัด password ออกจากการตอบกลับ
@@ -45,7 +45,7 @@ export class UsersService {
       throw new ConflictException('User with this email already exists');
     }
 
-    // 🔒 แฮชรหัสผ่านก่อนบันทึกลง Database
+    // แฮชรหัสผ่านก่อนบันทึกลง Database
     const hashedPassword = await bcrypt.hash(createUserDto.password, this.SALT_ROUNDS);
 
     return this.prisma.user.create({
@@ -65,7 +65,7 @@ export class UsersService {
   }
 
   /**
-   * 📋 ดึงรายชื่อผู้ใช้ทั้งหมด (Get All Users)
+   * ดึงรายชื่อผู้ใช้ทั้งหมด (Get All Users)
    */
   async findAll() {
     return this.prisma.user.findMany({
@@ -81,7 +81,7 @@ export class UsersService {
   }
 
   /**
-   * 🔍 ค้นหาผู้ใช้รายคนตาม ID (Get User by ID)
+   * ค้นหาผู้ใช้รายคนตาม ID (Get User by ID)
    * รวมรายการบทความ (posts) ที่ผู้ใช้นี้เป็นผู้เขียนกลับไปด้วย
    */
   async findOne(id: number) {
@@ -114,7 +114,7 @@ export class UsersService {
   }
 
   /**
-   * ✏️ แก้ไขข้อมูลผู้ใช้ (Update User)
+   * แก้ไขข้อมูลผู้ใช้ (Update User)
    * ตรวจสอบว่าผู้ใช้มีตัวตนอยู่จริงก่อนทำการอัปเดต
    */
   async update(id: number, updateUserDto: UpdateUserDto) {
@@ -141,7 +141,7 @@ export class UsersService {
   }
 
   /**
-   * 🗑️ ลบผู้ใช้ (Delete User)
+   * ลบผู้ใช้ (Delete User)
    * เนื่องจาก Prisma Schema ตั้งค่า onDelete: Cascade เอาไว้
    * หากลบ User นี้ โพสต์ทั้งหมดของเขาจะถูกลบไปด้วยโดยอัตโนมัติในฐานข้อมูล
    */

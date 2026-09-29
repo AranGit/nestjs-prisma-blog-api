@@ -20,11 +20,11 @@ import { Roles } from '../auth/decorators/roles.decorator.js';
 
 /**
  * ==============================================================================
- * 🏷️ CategoriesController (HTTP Controller สำหรับจัดการหมวดหมู่)
+ * CategoriesController (HTTP Controller สำหรับจัดการหมวดหมู่)
  * ==============================================================================
  * เส้นทาง Base URL: `/api/v1/categories`
  *
- * 💡 RBAC Authorization Rules:
+ * RBAC Authorization Rules:
  * - `GET` (ดูหมวดหมู่): เปิดเป็น Public ให้ทุกคนเข้าถึงได้
  * - `POST`, `PATCH`, `DELETE`: ต้องล็อกอิน (JWT) และจำกัดสิทธิ์เฉพาะ `ADMIN` เท่านั้น
  * ==============================================================================

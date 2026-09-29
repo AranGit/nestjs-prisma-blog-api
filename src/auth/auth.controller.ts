@@ -9,7 +9,7 @@ import { CurrentUser } from './decorators/current-user.decorator.js';
 
 /**
  * ==============================================================================
- * 🔐 AuthController (Authentication & Profile Endpoints)
+ * AuthController (Authentication & Profile Endpoints)
  * ==============================================================================
  * ให้บริการ Endpoint สำหรับสมัครสมาชิก, เข้าสู่ระบบ และดูข้อมูลส่วนตัว
  * เส้นทาง Base URL: `/api/v1/auth`

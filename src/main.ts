@@ -8,11 +8,11 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 
 /**
  * ==============================================================================
- * 🚀 bootstrap() - Application Entry Point (จุดเริ่มต้นของระบบ)
+ * bootstrap() - Application Entry Point (จุดเริ่มต้นของระบบ)
  * ==============================================================================
  * ฟังก์ชันหลักที่ใช้สร้าง NestJS Instance และตั้งค่า Middleware, Pipes, Filters, Swagger
  *
- * 💡 Key Backend Concepts Demonstrated Here:
+ * Key Backend Concepts Demonstrated Here:
  * 1. CORS: อนุญาตให้ Frontend (React, Vue, Next.js) ที่รันต่าง origin สามารถเรียก API ได้
  * 2. Global Prefix: ตั้งค่า Path เริ่มต้นของทุก Endpoint เช่น `/api/...`
  * 3. API Versioning: รองรับการพัฒนา API หลายเวอร์ชันพร้อมกัน (เช่น `/api/v1/...` และ `/api/v2/...`)
@@ -62,7 +62,7 @@ async function bootstrap() {
   );
 
   // 6. ลงทะเบียน Global Exception Filters
-  // ⚠️ ลำดับมีความสำคัญ: AllExceptionsFilter (จับ Error ทั่วไป 500) ต้องมาก่อน HttpExceptionFilter
+  // ลำดับมีความสำคัญ: AllExceptionsFilter (จับ Error ทั่วไป 500) ต้องมาก่อน HttpExceptionFilter
   // เพื่อให้ HttpExceptionFilter จัดการ HTTP Status เฉพาะทาง (400, 404, 409) ได้อย่างแม่นยำ
   app.useGlobalFilters(new AllExceptionsFilter(), new HttpExceptionFilter());
 
