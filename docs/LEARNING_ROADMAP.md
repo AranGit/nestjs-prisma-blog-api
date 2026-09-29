@@ -1,186 +1,190 @@
-# 🗺️ Roadmap การเรียนรู้สู่ Backend Developer (Learning Path)
-*แผนที่นำทางทีละขั้นตอน (Step-by-Step Guide) เพื่อสำรวจ ทำความเข้าใจ และฝึกฝนโค้ดในโปรเจกต์นี้ตั้งแต่ศูนย์จนเชี่ยวชาญ*
+# Learning Roadmap: From Zero to Backend Developer
+*แผนที่นำทางแบบทีละขั้นตอน (Step-by-Step Guide) เพื่อสำรวจ ทำความเข้าใจ และฝึกฝนโค้ดในโปรเจกต์นี้ตั้งแต่ศูนย์จนพร้อมทำงานจริง*
 
 ---
 
-## 🎯 ภาพรวมเส้นทางการเรียนรู้ (Visual Learning Flow)
+## Visual Learning Pipeline
 
 ```mermaid
 flowchart TD
-    Start([🚀 เริ่มต้น: ก้าวแรกสู่ Backend]) --> Step0["📦 Step 0: เตรียมเครื่องมือ & รันระบบ\n(Docker, NPM, Swagger)"]
-    Step0 --> Step1["🚪 Step 1: ประตูสู่ NestJS & Request Lifecycle\n(main.ts, Validation, Error Filters)"]
-    Step1 --> Step2["🗄️ Step 2: รากฐานข้อมูลด้วย Prisma ORM\n(schema.prisma, Relations, Cascade)"]
-    Step2 --> Step3["🧱 Step 3: สถาปัตยกรรม 3 ชั้น (CRUD พื้นฐาน)\n(Categories Module: DTO -> Controller -> Service)"]
-    Step3 --> Step4["🔒 Step 4: ความปลอดภัย & สิทธิ์ผู้ใช้งาน\n(Bcrypt Hashing, JWT Passport, RBAC Guards)"]
-    Step4 --> Step5["📝 Step 5: ตรรกะระดับกลาง & ตรวจสอบเจ้าของ\n(Posts V1: Ownership Authorization)"]
-    Step5 --> Step6["⚡ Step 6: การสเกลระบบ & API Versioning\n(Posts V2: Pagination, Search, Promise.all)"]
-    Step6 --> Step7["🚀 Step 7: แคชประสิทธิภาพสูงด้วย Redis\n(Cache-Aside Pattern & Safe Invalidation)"]
-    Step7 --> Step8["🧪 Step 8: คุณภาพซอฟต์แวร์ด้วย Unit Testing\n(Vitest, Mocking, 45 Unit Tests)"]
-    Step8 --> Finish([🎓 สำเร็จ: พร้อมเป็น Professional Backend Developer!])
+    Start([STAGE 0: Preparation]) --> P1["PHASE 1: Foundation & Infrastructure\nStep 0: Docker Setup & Verification\nStep 1: Request Lifecycle & Filters\nStep 2: Prisma ORM & Data Modeling"]
+    
+    P1 --> P2["PHASE 2: Core Architecture\nStep 3: 3-Tier Layered Architecture (Categories)\nStep 4: Authentication, Hashing & RBAC\nStep 5: Ownership Authorization (Posts v1)"]
+    
+    P2 --> P3["PHASE 3: Enterprise Performance\nStep 6: API Versioning, Pagination & Analytics (Posts v2)\nStep 7: In-Memory Caching & Invalidation (Redis)"]
+    
+    P3 --> P4["PHASE 4: Quality Assurance\nStep 8: Automated Unit Testing (Vitest & Mocking)"]
+    
+    P4 --> Finish([STAGE 5: Production Ready Backend Engineer])
 
-    classDef stepNode fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1;
-    classDef startNode fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#15803d;
-    classDef finishNode fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#b45309;
+    classDef stageNode fill:#f8fafc,stroke:#475569,stroke-width:2px,color:#0f172a;
+    classDef phaseNode fill:#f1f5f9,stroke:#0284c7,stroke-width:2px,color:#0369a1;
+    classDef finishNode fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#15803d;
 
-    class Start startNode;
+    class Start stageNode;
     class Finish finishNode;
-    class Step0,Step1,Step2,Step3,Step4,Step5,Step6,Step7,Step8 stepNode;
+    class P1,P2,P3,P4 phaseNode;
 ```
 
 ---
 
-## 📌 ขั้นตอนการสำรวจและเรียนรู้แบบเจาะลึก (Step-by-Step Learning)
+## Step-by-Step Learning Walkthrough
 
-### 📦 Step 0: เตรียมเครื่องมือ & รันระบบ (Environment & Infrastructure)
-**เป้าหมาย**: เข้าใจวิธีการที่ระบบ Backend เชื่อมต่อกับ Container ภายนอก และทดลองยิง API ครั้งแรก
-
-- 📂 **ไฟล์ที่ต้องเปิดดู**:
-  1. [`scripts/start-dev.sh`](../scripts/start-dev.sh) - สคริปต์ Bash อัตโนมัติที่สั่งเช็ค Docker, รัน Postgres (Port 5433) และ Redis (Port 6379) พร้อมทั้งสั่งซิงค์ Database Schema
-  2. [`.env.example`](../.env.example) - ตัวแปร Configuration ต่างๆ ที่จำเป็นต่อระบบ
-  3. [`package.json`](../package.json) - ดู scripts ต่างๆ เช่น `npm run start:dev`, `npm test`, `npm run db:stop`
-- 🧪 **การทดลองทำจริง (Action)**:
+### [STEP 0] Environment & Infrastructure Setup
+* **[GOAL]**: ทำความเข้าใจว่า NestJS เชื่อมต่อกับ Docker Container ภายนอกอย่างไร และทดสอบรันระบบครั้งแรก
+* **[SOURCE FILES]**:
+  1. [`scripts/start-dev.sh`](../scripts/start-dev.sh) - สคริปต์อัตโนมัติตรวจสอบ Docker, รัน Postgres (Port 5433) และ Redis (Port 6379) พร้อมซิงค์ Prisma Schema
+  2. [`.env.example`](../.env.example) - ตัวแปร Configuration ที่จำเป็นของระบบ
+  3. [`package.json`](../package.json) - Scripts คำสั่งต่างๆ เช่น `start:dev`, `test`, `db:stop`
+* **[KEY ARCHITECTURAL CONCEPTS]**:
+  - ทำไมต้องแยก Host Port ของ PostgreSQL เป็น `5433` (เพื่อไม่ให้ชนกับ Local Postgres บน Port `5432`)
+  - กลไก Healthcheck รอจนกระทั่ง Database และ Redis ตอบ `PONG` ก่อนเริ่มรัน Server
+* **[HANDS-ON ACTION]**:
   ```bash
   npm run start:dev
   ```
-  เปิดเบราว์เซอร์ไปที่ [http://localhost:3000/api/docs](http://localhost:3000/api/docs) เพื่อดู Swagger UI และลองกดเล่น API สัก 1-2 ตัว
+  เปิดเบราว์เซอร์ไปที่ [http://localhost:3000/api/docs](http://localhost:3000/api/docs) เพื่อดู Swagger UI และทดลองยิง API
 
 ---
 
-### 🚪 Step 1: ประตูสู่ NestJS & Request Lifecycle (การเดินทางของ Request)
-**เป้าหมาย**: เข้าใจว่าเมื่อ Client ส่ง HTTP Request เข้ามา เกิดอะไรขึ้นบ้างก่อนจะถึงโค้ดของเรา
-
-- 📂 **ไฟล์ที่ต้องเปิดดู**:
-  1. [`src/main.ts`](../src/main.ts) - จุดเริ่มต้นของแอป (Bootstrap): ดูการเปิดใช้งาน `setGlobalPrefix('api')`, `enableVersioning`, `ValidationPipe`, และ `SwaggerModule`
-  2. [`src/common/filters/http-exception.filter.ts`](../src/common/filters/http-exception.filter.ts) - ตัวแปลง Error มาตรฐาน
-  3. [`src/common/filters/all-exceptions.filter.ts`](../src/common/filters/all-exceptions.filter.ts) - ตัวดักจับ Unexpected 500 Errors
-- 💡 **สิ่งที่ต้องเข้าใจให้ได้**:
-  - ทำไมต้องมี `ValidationPipe({ whitelist: true })`? (เพื่อป้องกันช่องโหว่ Mass Assignment)
-  - ทำไมลำดับการวาง Global Filters ใน `main.ts` ถึงสำคัญมาก?
-
----
-
-### 🗄️ Step 2: รากฐานข้อมูลด้วย Prisma ORM (Data Modeling & Relations)
-**เป้าหมาย**: เข้าใจการออกแบบโครงสร้างตารางและความสัมพันธ์แบบ Type-Safe
-
-- 📂 **ไฟล์ที่ต้องเปิดดู**:
-  1. [`prisma/schema.prisma`](../prisma/schema.prisma) - โมเดล `User`, `Category`, `Post`, และ Enum `Role`
-  2. [`src/prisma/prisma.service.ts`](../src/prisma/prisma.service.ts) - คลาสเชื่อมต่อฐานข้อมูลที่ขยายมาจาก `PrismaClient`
-- 💡 **สิ่งที่ต้องเข้าใจให้ได้**:
-  - ความแตกต่างระหว่าง `onDelete: Cascade` (ใน User -> Post) กับ `onDelete: Restrict` (ใน Category -> Post)
-  - ทำไมต้องมี `PrismaService` ห่อหุ้ม `PrismaClient` อีกชั้นใน NestJS? (เพื่อให้ NestJS จัดการ Lifecycle และทำ Dependency Injection ได้)
+### [STEP 1] Request Lifecycle & Global Filters
+* **[GOAL]**: เข้าใจการเดินทางของ HTTP Request ตั้งแต่เข้ามายัง Server จนถึง Controller
+* **[SOURCE FILES]**:
+  1. [`src/main.ts`](../src/main.ts) - จุดเริ่มต้นของแอปพลิเคชัน (Bootstrap): การเปิดใช้ `setGlobalPrefix('api')`, `enableVersioning`, `ValidationPipe` และ Swagger
+  2. [`src/common/filters/http-exception.filter.ts`](../src/common/filters/http-exception.filter.ts) - ตัวแปลง HTTP Exception เป็น Standard JSON Format
+  3. [`src/common/filters/all-exceptions.filter.ts`](../src/common/filters/all-exceptions.filter.ts) - ตัวดักจับ Unhandled Errors (500 Internal Server Error)
+* **[KEY ARCHITECTURAL CONCEPTS]**:
+  - ทำไมต้องตั้งค่า `ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })` เพื่อป้องกันช่องโหว่ Mass Assignment
+  - ลำดับความสำคัญในการลงทะเบียน Global Filters: Filter เฉพาะเจาะจงต้องมาก่อน Filter กว้างๆ
+* **[CHECKPOINT]**:
+  - อธิบายได้ว่าถ้า Client ส่งฟิลด์แปลกปลอมเข้ามา ระบบจะตอบสนองอย่างไร
 
 ---
 
-### 🧱 Step 3: สถาปัตยกรรม 3 ชั้น (Categories Module - Classic CRUD)
-**เป้าหมาย**: เรียนรู้ Flow พื้นฐานของ Backend: DTO -> Controller -> Service -> Database
-
-- 📂 **ไฟล์ที่ต้องเปิดดูตามลำดับ**:
-  1. [`src/categories/dto/create-category.dto.ts`](../src/categories/dto/create-category.dto.ts) - การเขียน Class Validator ป้องกันข้อมูลขยะ
-  2. [`src/categories/categories.controller.ts`](../src/categories/categories.controller.ts) - ดูวิธีรับ HTTP (`@Get`, `@Post`), พารามิเตอร์ (`@Body`, `@Param`) และ Decorator ของ Swagger
-  3. [`src/categories/categories.service.ts`](../src/categories/categories.service.ts) - ดูการเขียน Business Logic และการเช็ค `findUnique` ป้องกันชื่อหมวดหมู่ซ้ำ
-  4. [`src/categories/categories.module.ts`](../src/categories/categories.module.ts) - ดูการผูก Controller เข้ากับ Provider (Service)
-- 💡 **สิ่งที่ต้องเข้าใจให้ได้**:
-  - ทำไมเราถึง**ห้าม**เขียนคำสั่งคิวรี Database ใน Controller?
-  - ทำไมต้องมี DTO แยกไฟล์ระหว่าง Create และ Update?
-
----
-
-### 🔒 Step 4: ความปลอดภัย & สิทธิ์ผู้ใช้งาน (Authentication & RBAC)
-**เป้าหมาย**: เข้าใจระบบความปลอดภัยระดับสากล การออกตั๋ว JWT และการล็อกประตู Endpoints
-
-- 📂 **ไฟล์ที่ต้องเปิดดูตามลำดับ**:
-  1. [`src/auth/auth.service.ts`](../src/auth/auth.service.ts) - ดูการใช้ `bcrypt.hash` ในการสมัครสมาชิก และ `bcrypt.compare` + `jwtService.sign` ในการ Login
-  2. [`src/auth/strategies/jwt.strategy.ts`](../src/auth/strategies/jwt.strategy.ts) - Passport Strategy ที่ถอดรหัส Token และดึง User มาใส่ใน `req.user`
-  3. [`src/auth/guards/roles.guard.ts`](../src/auth/guards/roles.guard.ts) - Guard ที่ดึง Metadata จาก `@Roles()` มาตรวจสอบว่าสิทธิ์ของผู้ใช้ผ่านเกณฑ์หรือไม่
-  4. [`src/common/decorators/current-user.decorator.ts`](../src/common/decorators/current-user.decorator.ts) - Custom Parameter Decorator สำหรับดึง user ออกมาจาก request อย่างสะอาดตา
-- 💡 **สิ่งที่ต้องเข้าใจให้ได้**:
-  - ทำไมเราถึงไม่เก็บ Password ใน Database เป็นตัวอักษรธรรมดา (Plain text)?
-  - Token มีข้อมูลอะไรข้างในบ้าง (Payload)? และทำไมจึงไม่ควรเก็บรหัสผ่านไว้ใน JWT Token?
+### [STEP 2] Prisma ORM & Data Modeling
+* **[GOAL]**: เข้าใจการออกแบบ Schema ความสัมพันธ์แบบ 1-to-Many และข้อกำหนด Referential Integrity
+* **[SOURCE FILES]**:
+  1. [`prisma/schema.prisma`](../prisma/schema.prisma) - นิยามตาราง `users`, `categories`, `posts` และ Enum `Role`
+  2. [`src/prisma/prisma.service.ts`](../src/prisma/prisma.service.ts) - Singleton Wrapper ห่อหุ้ม `PrismaClient` ภายใต้ NestJS Lifecycle
+* **[KEY ARCHITECTURAL CONCEPTS]**:
+  - ความแตกต่างระหว่าง `onDelete: Cascade` (User -> Post) กับ `onDelete: Restrict` (Category -> Post)
+  - การกำหนด Unique Index บนคอลัมน์ `email` และ `name` เพื่อความรวดเร็วและป้องกันข้อมูลซ้ำ
+* **[CHECKPOINT]**:
+  - อธิบายได้ว่าทำไมการลบ Category ที่ยังมี Post ผูกอยู่จึงถูกปฏิเสธโดย Database
 
 ---
 
-### 📝 Step 5: ตรรกะระดับกลาง & ตรวจสอบเจ้าของ (Posts Module - V1 CRUD)
-**เป้าหมาย**: เรียนรู้การผูกข้อมูลอัตโนมัติจาก Token และการทำ Ownership Authorization
-
-- 📂 **ไฟล์ที่ต้องเปิดดู**:
-  1. [`src/posts/posts.controller.ts`](../src/posts/posts.controller.ts) - ดูการใช้ `@UseGuards(JwtAuthGuard)` และการส่ง `@CurrentUser()` เข้า Service
-  2. [`src/posts/posts.service.ts`](../src/posts/posts.service.ts) - ดูฟังก์ชัน `create`, `update`, `remove`
-- 💡 **สิ่งที่ต้องเข้าใจให้ได้**:
-  - ทำไม Client ไม่ต้องส่ง `authorId` มาใน Body ตอนสร้างบทความ? (ระบบอ่านจาก Token ป้องกันการสวมรอย)
-  - ในฟังก์ชัน `update` และ `remove` โค้ดตรวจสอบอย่างไรให้ Admin แก้ไขได้ทุกคน แต่ Author แก้ได้เฉพาะโพสต์ของตัวเอง?
+### [STEP 3] 3-Tier Layered Architecture (Categories Module)
+* **[GOAL]**: เรียนรู้ Flow พื้นฐานของ Backend: DTO -> Controller -> Service -> Database ผ่านโมดูล CRUD ที่เข้าใจง่ายที่สุด
+* **[SOURCE FILES]**:
+  1. [`src/categories/dto/create-category.dto.ts`](../src/categories/dto/create-category.dto.ts) - การใช้ class-validator กำหนดเงื่อนไขข้อมูลนำเข้า
+  2. [`src/categories/categories.controller.ts`](../src/categories/categories.controller.ts) - การรับ HTTP Method (`@Get`, `@Post`), พารามิเตอร์ (`@Body`, `@Param`) และ Swagger Decorators
+  3. [`src/categories/categories.service.ts`](../src/categories/categories.service.ts) - การเขียน Business Logic, การเช็คชื่อซ้ำ และการดึงข้อมูลพร้อม `_count`
+  4. [`src/categories/categories.module.ts`](../src/categories/categories.module.ts) - การรวม Controller และ Provider เข้าเป็น Feature Module
+* **[KEY ARCHITECTURAL CONCEPTS]**:
+  - กฎเหล็ก: ห้ามเขียนคำสั่ง Database Query ใน Controller เด็ดขาด
+  - Separation of Concerns: Controller จัดการ HTTP Routing ส่วน Service จัดการ Business Rules
+* **[CHECKPOINT]**:
+  - อธิบายการทำงานของ Dependency Injection ที่ส่ง `PrismaService` เข้าสู่ `CategoriesService`
 
 ---
 
-### ⚡ Step 6: การสเกลระบบ & API Versioning (Posts Module - V2)
-**เป้าหมาย**: เรียนรู้เทคนิคการรับมือกับข้อมูลขนาดใหญ่ (Big Data / High Traffic)
+### [STEP 4] Authentication, Hashing & Role-Based Access Control
+* **[GOAL]**: เข้าใจกลไกการรักษาความปลอดภัย การเข้ารหัสผ่าน การออก Token และการจำกัดสิทธิ์ Endpoint
+* **[SOURCE FILES]**:
+  1. [`src/auth/auth.service.ts`](../src/auth/auth.service.ts) - การใช้ `bcrypt.hash` ตอนสมัครสมาชิก และ `bcrypt.compare` + `jwtService.sign` ตอนเข้าสู่ระบบ
+  2. [`src/auth/strategies/jwt.strategy.ts`](../src/auth/strategies/jwt.strategy.ts) - Passport Strategy สกัด Bearer Token และดึง User Profile มาเก็บใน `req.user`
+  3. [`src/auth/guards/roles.guard.ts`](../src/auth/guards/roles.guard.ts) - Guard ตรวจสอบ Metadata จาก `@Roles()` กับ Role ของผู้ใช้ปัจจุบัน
+  4. [`src/common/decorators/current-user.decorator.ts`](../src/common/decorators/current-user.decorator.ts) - Custom Parameter Decorator ดึง User สะอาดตา
+* **[KEY ARCHITECTURAL CONCEPTS]**:
+  - ข้อแตกต่างระหว่าง Authentication (ระบุตัวตน) กับ Authorization (ตรวจสอบสิทธิ์)
+  - ทำไมไม่ควรเก็บข้อมูล Sensitive เช่น รหัสผ่าน ไว้ใน JWT Payload
+* **[CHECKPOINT]**:
+  - สามารถไล่ Flow ได้ตั้งแต่ Client ยิง Login -> ได้รับ Token -> แนบ Header `Authorization: Bearer <token>` -> Guard อนุญาตให้เข้าถึง
 
-- 📂 **ไฟล์ที่ต้องเปิดดู**:
+---
+
+### [STEP 5] Ownership Authorization (Posts Module v1)
+* **[GOAL]**: เรียนรู้การผูกข้อมูลจาก Token อัตโนมัติ และการทำ Resource-Based Ownership Check
+* **[SOURCE FILES]**:
+  1. [`src/posts/posts.controller.ts`](../src/posts/posts.controller.ts) - การป้องกัน Route ด้วย `@UseGuards(JwtAuthGuard)` และส่ง `@CurrentUser()` เข้า Service
+  2. [`src/posts/posts.service.ts`](../src/posts/posts.service.ts) - เมธอด `create`, `update`, `remove`
+* **[KEY ARCHITECTURAL CONCEPTS]**:
+  - ผู้ใช้ไม่ต้องส่ง `authorId` มาใน Body ตอนสร้างบทความ ระบบดึงจาก JWT ป้องกันการสวมรอย
+  - ในคำสั่ง `update` และ `remove`: ADMIN แก้ไข/ลบได้ทุกบทความ ส่วน AUTHOR แก้ไข/ลบได้เฉพาะบทความที่ตนเองเป็นเจ้าของ
+* **[CHECKPOINT]**:
+  - อธิบายเงื่อนไข if-else ที่ใช้ตรวจสอบสิทธิ์ใน `update()` และ `remove()`
+
+---
+
+### [STEP 6] API Versioning, Pagination & Performance (Posts Module v2)
+* **[GOAL]**: ศึกษาวิธีการสเกลระบบเพื่อรับมือกับข้อมูลขนาดใหญ่ และการออกแบบ Versioning
+* **[SOURCE FILES]**:
   1. [`src/posts/posts-v2.controller.ts`](../src/posts/posts-v2.controller.ts) - Controller ของ Version 2
   2. [`src/posts/dto/query-post-v2.dto.ts`](../src/posts/dto/query-post-v2.dto.ts) - DTO รองรับ Query Parameters (`page`, `limit`, `search`, `categoryId`)
-  3. [`src/posts/posts.service.ts`](../src/posts/posts.service.ts) (ดูเมธอด `findAllV2`, `findOneV2`, `getStatsV2`)
-- 💡 **สิ่งที่ต้องเข้าใจให้ได้**:
-  - ทำไมระบบขนาดใหญ่จึงห้ามใช้ `findAll` แบบ v1 (คืนค่าทั้งหมด)?
-  - ทำไมต้องใช้ `skip: (page - 1) * limit` และ `take: limit`?
-  - ทำไมต้องใช้ `Promise.all([count, findMany])` แทนที่จะ `await` ทีละบรรทัด?
-  - ทำไมต้องวาง `@Get('stats')` ไว้ก่อนหน้า `@Get(':id')`? (Route Precedence)
+  3. [`src/posts/posts.service.ts`](../src/posts/posts.service.ts) - เมธอด `findAllV2`, `findOneV2`, `getStatsV2`
+* **[KEY ARCHITECTURAL CONCEPTS]**:
+  - ทำไมระบบ Production ขนาดใหญ่ห้ามคืนค่า Flat Array ทั้งหมด (ป้องกัน Memory Exhaustion)
+  - การใช้ `skip` และ `take` ทำ Database Pagination ร่วมกับ Metadata
+  - การใช้ `Promise.all([count, findMany])` เพื่อประมวลผลพร้อมกันในระดับ Database
+  - กฎสำคัญของ Route Precedence: Static Route (`@Get('stats')`) ต้องอยู่ก่อน Dynamic Route (`@Get(':id')`)
+* **[CHECKPOINT]**:
+  - อธิบายผลลัพธ์ที่จะเกิดขึ้นหากวาง `@Get(':id')` ไว้ก่อนหน้า `@Get('stats')`
 
 ---
 
-### 🚀 Step 7: แคชประสิทธิภาพสูงด้วย Redis (Caching & Invalidation)
-**เป้าหมาย**: เข้าใจการทำ In-Memory Data Caching เพื่อลดภาระของฐานข้อมูลลง 90%+
-
-- 📂 **ไฟล์ที่ต้องเปิดดู**:
-  1. [`src/redis/redis.service.ts`](../src/redis/redis.service.ts) - Wrapper สำหรับ ioredis พร้อมเมธอด `get`, `set`, `del`, `delByPattern`
-  2. [`src/redis/redis.module.ts`](../src/redis/redis.module.ts) - การทำ `@Global()` Module ใน NestJS
-  3. [`src/posts/posts.service.ts`](../src/posts/posts.service.ts) - ดูส่วนของ Cache Hit/Miss ใน `findAllV2` และการล้างแคชใน `create/update/remove`
-- 💡 **สิ่งที่ต้องเข้าใจให้ได้**:
-  - **Cache-Aside Pattern**: ลำดับการเช็คแคชก่อนคิวรี Database ทำงานอย่างไร?
-  - ทำไมใน Production จึง**ห้ามใช้คำสั่ง `KEYS *` เด็ดขาด**? และทำไมต้องใช้ `scanStream` แทน?
-  - การทำ **Cache Invalidation** จำเป็นอย่างไรเมื่อข้อมูลมีการเปลี่ยนแปลง?
-
----
-
-### 🧪 Step 8: คุณภาพซอฟต์แวร์ด้วย Unit Testing (Automated Tests with Vitest)
-**เป้าหมาย**: เขียน Automated Test เป็น ไม่ต้องพึ่งพาการทดสอบด้วยมือ (Manual Testing) ตลอดเวลา
-
-- 📂 **ไฟล์ที่ต้องเปิดดู**:
-  1. [`vitest.config.ts`](../vitest.config.ts) - การตั้งค่า Vitest ใน NestJS
-  2. [`src/categories/categories.service.spec.ts`](../src/categories/categories.service.spec.ts) - ตัวอย่าง Mocking ฐานข้อมูลด้วย `vitest-mock-extended`
-  3. [`src/auth/guards/roles.guard.spec.ts`](../src/auth/guards/roles.guard.spec.ts) - ตัวอย่างการ Mock `ExecutionContext` และ `Reflector`
-  4. [`src/posts/posts.service.spec.ts`](../src/posts/posts.service.spec.ts) - การทดสอบครอบคลุมทั้ง Database, Ownership, Cache Hit, Cache Miss และ Invalidation
-  5. [`src/redis/redis.service.spec.ts`](../src/redis/redis.service.spec.ts) - การทดสอบ Redis Service
-- 💡 **สิ่งที่ต้องเข้าใจให้ได้**:
-  - โครงสร้าง **AAA (Arrange - Act - Assert)** คืออะไร?
-  - ทำไมการใช้ `mockDeep<PrismaClient>()` ถึงทำให้ Unit Test รันได้เร็วมาก (น้อยกว่า 1 วินาที)?
+### [STEP 7] In-Memory Caching & Safe Invalidation (Redis)
+* **[GOAL]**: เข้าใจกลยุทธ์การทำ In-Memory Caching เพื่อลดภาระ Database และเพิ่มความเร็วในการตอบสนองระดับต่ำกว่า 5ms
+* **[SOURCE FILES]**:
+  1. [`src/redis/redis.service.ts`](../src/redis/redis.service.ts) - In-Memory Wrapper รองรับ `get`, `set`, `del`, `delByPattern`
+  2. [`src/redis/redis.module.ts`](../src/redis/redis.module.ts) - การสร้าง `@Global()` Module ใน NestJS
+  3. [`src/posts/posts.service.ts`](../src/posts/posts.service.ts) - กลยุทธ์ Cache-Aside ใน `findAllV2` และ Invalidation ใน `create`, `update`, `remove`
+* **[KEY ARCHITECTURAL CONCEPTS]**:
+  - **Cache-Aside Pattern (Lazy Loading)**: เช็คแคชก่อน หากมีข้อมูล (Hit) คืนค่าทันที หากไม่มี (Miss) ดึง DB แล้วเซฟลงแคชพร้อม TTL (60s)
+  - **Non-blocking Invalidation**: ทำไมต้องใช้ `scanStream` แทนคำสั่ง `KEYS *` (ป้องกันการบล็อก Redis Single-Threaded Event Loop)
+* **[CHECKPOINT]**:
+  - อธิบายคำสั่งที่เกิดขึ้นใน Redis เมื่อมีการสร้างโพสต์ใหม่
 
 ---
 
-## 🏆 Checklist ประเมินตนเอง (Self-Assessment Checklist)
-
-ทำเครื่องหมาย `[x]` เมื่อคุณเข้าใจหัวข้อนั้นๆ อย่างถ่องแท้:
-
-- [ ] **Docker & Setup**: รัน Docker container และอธิบายได้ว่า port 5433 กับ 6379 ใช้งานอย่างไร
-- [ ] **NestJS Architecture**: อธิบายความแตกต่างระหว่าง Controller, Service, Module, และ DTO ได้
-- [ ] **Validation**: เข้าใจการทำงานของ `class-validator` และ `ValidationPipe`
-- [ ] **Prisma ORM**: เขียน Schema, กำหนดความสัมพันธ์ 1-to-many, และอธิบาย Cascade vs Restrict ได้
-- [ ] **Authentication**: อธิบายการไหลของข้อมูลตอน Login -> ออก JWT -> ส่ง Bearer Token -> ผ่าน JwtStrategy ได้
-- [ ] **Authorization**: อธิบายความแตกต่างระหว่าง Role-Based (Admin/Author) กับ Resource-Based (Ownership) ได้
-- [ ] **Optimization**: อธิบายหลักการแบ่งหน้า (Pagination) และประโยชน์ของ `Promise.all` ได้
-- [ ] **Redis Caching**: อธิบาย Cache-Aside Pattern, TTL, และเหตุผลที่ห้ามใช้ `KEYS *` ใน Production ได้
-- [ ] **Unit Testing**: อธิบายหลักการ Mocking และรัน `npm test` ผ่านทั้ง 45 ข้อได้
+### [STEP 8] Automated Unit Testing & Deep Mocking (Vitest)
+* **[GOAL]**: ฝึกฝนการเขียน Automated Tests และการจำลองระบบภายนอกด้วย Deep Mocking
+* **[SOURCE FILES]**:
+  1. [`vitest.config.ts`](../vitest.config.ts) - การตั้งค่า Vitest ในโปรเจกต์ NestJS
+  2. [`src/categories/categories.service.spec.ts`](../src/categories/categories.service.spec.ts) - การ Mock Prisma Client ด้วย `vitest-mock-extended`
+  3. [`src/auth/guards/roles.guard.spec.ts`](../src/auth/guards/roles.guard.spec.ts) - การ Mock `ExecutionContext` และ `Reflector`
+  4. [`src/posts/posts.service.spec.ts`](../src/posts/posts.service.spec.ts) - การทดสอบครอบคลุม Ownership, Cache Hit, Cache Miss, Invalidation
+  5. [`src/redis/redis.service.spec.ts`](../src/redis/redis.service.spec.ts) - การทดสอบ Redis Service และ Non-blocking Stream
+* **[KEY ARCHITECTURAL CONCEPTS]**:
+  - โครงสร้าง AAA (Arrange - Act - Assert)
+  - ประโยชน์ของ In-Memory Mocking: เทสต์รันได้รวดเร็ว (< 1 วินาที) โดยไม่ต้องเปิด Docker หรือต่อ Network จริง
+* **[CHECKPOINT]**:
+  - รัน `npm test` และยืนยันว่าการทดสอบทั้ง 45 ข้อผ่านทั้งหมด 100%
 
 ---
 
-## 🚀 ความท้าทายเพื่อฝึกฝนต่อยอด (Hands-On Challenges)
+## Self-Assessment Matrix
 
-หากเรียนรู้ครบถ้วนแล้วและต้องการท้าทายตนเอง ลองพัฒนาต่อยอดด้วยโจทย์เหล่านี้:
+| Competency Area | Essential Knowledge Checklist | Status |
+|---|---|:---:|
+| **Infrastructure** | สามารถรัน Docker Compose / Start script และอธิบาย Port 5433 และ 6379 ได้ | [ ] |
+| **Architecture** | อธิบายบทบาทหน้าที่ที่แตกต่างกันของ Controller, Service, Module, DTO ได้ | [ ] |
+| **Validation** | เข้าใจการทำงานของ `class-validator`, `ValidationPipe` และการป้องกัน Mass Assignment | [ ] |
+| **ORM & Relational DB** | ออกแบบ Schema, ความสัมพันธ์ 1-to-Many, และอธิบาย Cascade vs Restrict ได้ | [ ] |
+| **Authentication** | อธิบายการไหลของข้อมูลตอน Login -> Bcrypt Verify -> Sign JWT -> Bearer Token ได้ | [ ] |
+| **Authorization** | อธิบายความต่างระหว่าง Role-Based (Admin/Author) กับ Resource Ownership ได้ | [ ] |
+| **Performance** | อธิบายหลักการ Pagination, Concurrency ด้วย `Promise.all` ได้ | [ ] |
+| **Caching** | อธิบาย Cache-Aside, TTL, และเหตุผลที่ห้ามใช้ `KEYS *` ใน Production ได้ | [ ] |
+| **Software Quality** | อธิบายหลักการ Deep Mocking และรัน Unit Test 45 ข้อผ่านครบถ้วนได้ | [ ] |
 
-1. **เพิ่มฟีเจอร์ Tag System**:
-   - เพิ่ม Model `Tag` ใน `prisma/schema.prisma`
-   - ทำความสัมพันธ์แบบ Many-to-Many (`Post` <-> `Tag`)
-   - อัปเดต DTO และ Service ให้สามารถผูก Tag กับบทความได้
-2. **เพิ่มระบบ Like บทความ**:
-   - สร้าง Model `PostLike` (`userId`, `postId`) แบบ Composite Primary Key เพื่อกันการ Like ซ้ำ
-   - สร้าง Endpoint `POST /api/v1/posts/:id/like`
-3. **ระบบแคชสำหรับ Tag**:
-   - นำ `RedisService` ไปแคชรายการสถิติ Tag ยอดนิยม
+---
+
+## Practical Challenges for Mastery
+
+เมื่อศึกษาจนครบถ้วนแล้ว ให้ลองพัฒนาฟีเจอร์เหล่านี้ต่อยอดด้วยตนเอง:
+
+| Challenge | Requirements | Architectural Focus |
+|---|---|---|
+| **Challenge 1: Tagging System** | เพิ่ม Model `Tag` ใน `schema.prisma` ทำความสัมพันธ์ Many-to-Many กับ `Post` | Schema Relations, Nested Writes, Validation |
+| **Challenge 2: Post Likes Counter** | เพิ่ม Model `PostLike` พร้อม Composite Key (`userId`, `postId`) ป้องกันการกดซ้ำ | Composite Keys, Unique Constraints, Transaction |
+| **Challenge 3: Tag Caching** | นำ `RedisService` ไปแคชผลลัพธ์ของ Tag ยอดนิยม | In-Memory Caching, Cache Invalidation Strategy |

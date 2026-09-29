@@ -1,129 +1,175 @@
-# 📰 NestJS + Prisma + PostgreSQL Blog CMS API
+# NestJS + Prisma + PostgreSQL Blog CMS API
 
-> 🗺️ **แผนที่เส้นทางการเรียนรู้ (Learning Roadmap)**: แนะนำให้เริ่มศึกษาตามลำดับได้ที่ [docs/LEARNING_ROADMAP.md](docs/LEARNING_ROADMAP.md)  
-> 📖 **คู่มือเจาะลึก 9 เสาหลัก Backend ฉบับสมบูรณ์**: อ่านเนื้อหาภาคทฤษฎีและแนวคิดได้ที่ [docs/blog-api-guide.md](docs/blog-api-guide.md)
-
----
-
-## 🌟 จุดเด่นของโปรเจกต์ (Key Features)
-
-- ⚡ **NestJS 12 (TypeScript & ES Modules)**: สถาปัตยกรรมระดับองค์กร (Enterprise Architecture) ที่มีระเบียบและสเกลง่าย
-- 🔒 **Authentication & JWT**: ระบบสมัครสมาชิก, เข้าสู่ระบบ และออก Access Token ด้วย Passport & JWT
-- 🛡️ **Role-Based Access Control (RBAC)**: แบ่งระดับสิทธิ์ผู้ใช้เป็น `ADMIN` และ `AUTHOR` พร้อมระบบปกป้องความเป็นเจ้าของบทความ (Ownership Protection)
-- 🔑 **Password Hashing (bcrypt)**: เข้ารหัสผ่านอย่างปลอดภัยก่อนบันทึกลง Database
-- ⚡ **In-Memory Caching with Redis**: กลยุทธ์ **Cache-Aside Pattern** บน `GET /api/v2/posts` (TTL = 60s) พร้อมระบบ Non-blocking Cache Invalidation (`scanStream`)
-- 🐘 **PostgreSQL & Prisma 6 ORM**: Data Modeling ที่มี Type-Safety สูงสุด พร้อมความสัมพันธ์แบบ 1-to-Many
-- 🛡️ **DTO & Class Validation**: ป้องกันข้อมูลผิดพลาดและช่องโหว่ Mass Assignment ด้วย `class-validator`
-- 🎯 **URI API Versioning**: รองรับทั้ง `/api/v1` (CRUD ปกติ) และ `/api/v2` (Pagination, Metrics, Analytics)
-- 🚨 **Global Exception Filters**: ระบบดักจับ Error และแปลงเป็น JSON Format มาตรฐานเดียวกันทั้งระบบ
-- 📚 **Swagger (OpenAPI) Documentation**: มี Interactive Web UI พร้อมปุ่ม **Authorize** สำหรับใส่ JWT Token
-- 🐳 **One-Command Dev Environment**: สคริปต์เปิด Docker PostgreSQL + Redis + ซิงค์ Prisma Schema + รัน Server อัตโนมัติ
+> [ROADMAP] แผนที่เส้นทางการเรียนรู้ (Learning Flow): แนะนำให้เริ่มศึกษาตามลำดับได้ที่ [docs/LEARNING_ROADMAP.md](docs/LEARNING_ROADMAP.md)  
+> [GUIDE] คู่มือเจาะลึก 9 เสาหลัก Backend ฉบับสมบูรณ์: อ่านเนื้อหาภาคทฤษฎีและแนวคิดได้ที่ [docs/blog-api-guide.md](docs/blog-api-guide.md)
 
 ---
 
-## 🏗️ สถาปัตยกรรมระบบ (System Architecture & Flow)
+## Technical Specifications Matrix
 
-NestJS ทำงานตามหลักการ **Separation of Concerns (SoC)** โดยแบ่งหน้าที่อย่างชัดเจนในแต่ละชั้น พร้อม Cache Layer:
+| Layer | Technology | Details |
+|---|---|---|
+| **Runtime & Language** | Node.js (v18+) / TypeScript 5 | Native ECMAScript Modules (ESM) |
+| **Framework** | NestJS 12 | Modular Enterprise Architecture |
+| **Database** | PostgreSQL 16 (Alpine) | Docker Container (Host Port 5433 -> Container 5432) |
+| **Object-Relational Mapping** | Prisma 6 | Type-Safe Database Client, Relations, Migrations |
+| **Cache Storage** | Redis 7 (Alpine) | In-Memory Data Store (Port 6379), Cache-Aside Strategy |
+| **Authentication & Security** | Passport JWT / bcrypt | Role-Based Access Control (ADMIN / AUTHOR), Ownership Guards |
+| **Validation & Serialization** | class-validator / class-transformer | Strict Whitelist & Type Casting |
+| **API Versioning** | URI-based Versioning | Default v1 with Advanced v2 Endpoints |
+| **API Documentation** | Swagger (OpenAPI 3.0) | Interactive Documentation with Bearer Auth |
+| **Automated Testing** | Vitest / vitest-mock-extended | 45 Unit Tests across 6 Test Suites (Deep Mocking) |
+
+---
+
+## Key Features
+
+- **[FRAMEWORK] NestJS 12 Architecture**: โครงสร้างแบบแยกส่วน (Modular Architecture) สเกลง่าย เป็นระเบียบตามหลัก Separation of Concerns (SoC)
+- **[SECURITY] Authentication & JWT**: ระบบสมัครสมาชิก, เข้าสู่ระบบ และออก Access Token ด้วย Passport และ JSON Web Token
+- **[RBAC] Role-Based Access Control**: แบ่งระดับสิทธิ์ผู้ใช้เป็น `ADMIN` และ `AUTHOR` พร้อมระบบ Ownership Authorization ปกป้องบทความของผู้เขียน
+- **[CRYPTOGRAPHY] Password Hashing (bcrypt)**: เข้ารหัสผ่านอย่างปลอดภัยด้วย Salt Rounds ก่อนบันทึกลงฐานข้อมูล
+- **[CACHE] In-Memory Caching (Redis 7)**: กลยุทธ์ **Cache-Aside Pattern** บน `GET /api/v2/posts` (TTL = 60s) พร้อมระบบ Non-blocking Cache Invalidation (`scanStream`)
+- **[DATABASE] PostgreSQL & Prisma 6**: Data Modeling ที่มี Type-Safety สูงสุด พร้อมความสัมพันธ์ 1-to-Many, Cascade Delete และ Restrict Delete
+- **[VALIDATION] Strict DTO Validation**: ป้องกันช่องโหว่ Mass Assignment ด้วย `class-validator` และ `whitelist: true`
+- **[VERSIONING] URI API Versioning**: รองรับทั้ง `/api/v1` (CRUD ปกติ) และ `/api/v2` (Pagination, Metrics, Analytics)
+- **[FILTER] Global Exception Filters**: ระบบดักจับ Error และแปลงเป็น JSON Format มาตรฐานเดียวกันทั้งระบบ
+- **[API-DOCS] Swagger Documentation**: Interactive Web UI พร้อมปุ่ม Authorize สำหรับทดสอบ API ด้วย JWT Token
+- **[CONTAINER] One-Command Dev Environment**: สคริปต์เปิด Docker PostgreSQL + Redis + ซิงค์ Schema อัตโนมัติในคำสั่งเดียว
+
+---
+
+## System Architecture & Request Flow
+
+### 1. Overall System Topology
 
 ```mermaid
 flowchart LR
-    Client([💻 Client / Frontend / Swagger])
+    Client([Client / Frontend / Swagger])
     
-    subgraph NestJS ["🚀 NestJS Application Layer"]
-        Pipe["🛡️ ValidationPipe\n(class-validator)"]
-        Filter["🚨 Exception Filter\n(Format Errors)"]
-        Controller["🌐 Controller\n(Routing & HTTP)"]
-        Service["🧠 Service\n(Business Logic)"]
-        RedisServ["⚡ RedisService\n(In-Memory Cache)"]
+    subgraph AppHost ["Host Machine: Application Tier"]
+        subgraph NestJS ["NestJS Application (Port 3000)"]
+            Pipe["ValidationPipe\n(class-validator)"]
+            Filter["ExceptionFilter\n(Standard Error)"]
+            Controller["Controller Layer\n(v1 & v2 Routing)"]
+            Service["Service Layer\n(Business Logic)"]
+            RedisServ["RedisService\n(In-Memory Client)"]
+            PrismaServ["PrismaService\n(Prisma ORM Client)"]
+        end
     end
     
-    subgraph Storage ["💾 Storage Layer"]
-        Redis[(⚡ Redis 7 Cache\nPort 6379)]
-        PrismaService["🔌 PrismaService\n(Prisma ORM)"]
-        Postgres[(🐘 PostgreSQL\nPort 5433)]
+    subgraph DockerHost ["Docker Engine: Data Tier"]
+        RedisNode[(Redis 7 Alpine\nHost: 6379)]
+        PostgresNode[(PostgreSQL 16 Alpine\nHost: 5433 -> 5432)]
     end
 
     Client -->|HTTP Request| Pipe
-    Pipe -->|Valid DTO| Controller
-    Controller -->|Calls method| Service
+    Pipe -->|Validated DTO| Controller
+    Controller -->|Invoke Logic| Service
 
     Service -->|1. Check Cache| RedisServ
-    RedisServ <-->|Hit / Miss / Invalidate| Redis
+    RedisServ <-->|Cache Hit / Miss / Invalidate| RedisNode
 
-    Service -->|2. On Cache Miss: Query| PrismaService
-    PrismaService <-->|SQL Queries| Postgres
+    Service -->|2. Query on Cache Miss| PrismaServ
+    PrismaServ <-->|SQL Queries| PostgresNode
 
     Service --> Controller
     Controller -->|JSON Response| Client
     
-    Pipe -.->|Validation Error 400| Filter
-    Service -.->|Business Error 404/409| Filter
-    Filter -.->|Standardized Error JSON| Client
+    Pipe -.->|400 Bad Request| Filter
+    Service -.->|404 / 403 / 409| Filter
+    Filter -.->|Standard Error JSON| Client
+```
+
+### 2. Request Lifecycle Pipeline
+
+```mermaid
+flowchart TD
+    Req([HTTP Request]) --> GlobalPrefix["Global Prefix: /api"]
+    GlobalPrefix --> VersionRoute["Version Resolver: /v1 or /v2"]
+    VersionRoute --> GuardCheck{"Auth & Role Guard\n(JwtAuthGuard / RolesGuard)"}
+    
+    GuardCheck -- "Unauthorized / Forbidden" --> ThrowAuth["Throw 401 / 403"]
+    GuardCheck -- "Authorized / Public" --> ValPipe["ValidationPipe (whitelist, transform)"]
+    
+    ValPipe -- "Invalid Payload" --> ThrowVal["Throw 400 Bad Request"]
+    ValPipe -- "Valid Payload" --> ControllerExec["Controller Route Handler"]
+    
+    ControllerExec --> ServiceExec["Service Business Logic"]
+    ServiceExec --> ResponseJSON([HTTP Response JSON])
+    
+    ThrowAuth --> ExceptionFilter["Global Exception Filters"]
+    ThrowVal --> ExceptionFilter
+    ExceptionFilter --> FormattedError([Standardized Error JSON])
 ```
 
 ---
 
-## 🗄️ โครงสร้างฐานข้อมูล (Database Schema & Relations)
+## Database Schema & Relations
 
 ```mermaid
 erDiagram
-    users ||--o{ posts : "1 user has many posts (onDelete: Cascade)"
-    categories ||--o{ posts : "1 category has many posts (onDelete: Restrict)"
+    users ||--o{ posts : "authorId (onDelete: Cascade)"
+    categories ||--o{ posts : "categoryId (onDelete: Restrict)"
 
     users {
         int id PK
-        string email UK
-        string password
-        string name
+        string email UK "Unique Index"
+        string password "Hashed bcrypt"
+        string name "User Name"
+        Role role "ADMIN | AUTHOR"
         datetime createdAt
         datetime updatedAt
     }
 
     categories {
         int id PK
-        string name UK
+        string name UK "Unique Index"
         datetime createdAt
         datetime updatedAt
     }
 
     posts {
         int id PK
-        string title
-        string content
-        boolean isPublished
-        int authorId FK
-        int categoryId FK
+        string title "Post Title"
+        string content "Text Content"
+        boolean isPublished "Publish Status"
+        int authorId FK "References users.id"
+        int categoryId FK "References categories.id"
         datetime createdAt
         datetime updatedAt
     }
 ```
 
-### 💡 Backend Concepts ในตารางนี้:
-1. **Cascade Delete (`User -> Post`)**: เมื่อลบ User ผู้เขียน บทความทั้งหมดที่ผู้ใช้นี้เขียนจะถูกลบตามทันทีอัตโนมัติ
-2. **Restrict Delete (`Category -> Post`)**: หากหมวดหมู่ยังมีบทความผูกอยู่ จะ**ไม่อนุญาตให้ลบ**หมวดหมู่นั้น เพื่อป้องกันปัญหาข้อมูลกำพร้า (Orphan Data)
-3. **Database Indexing & Constraints**: กำหนด `email` และชื่อหมวดหมู่ `name` ให้เป็น `@unique` เพื่อให้ค้นหาได้รวดเร็วและป้องกันข้อมูลซ้ำซ้อนในระดับฐานข้อมูล
+### Relational Integrity & Constraint Matrix
+
+| Relationship | Constraint | Type | Action on Delete | Business Rationale |
+|---|---|---|---|---|
+| `User -> Post` | `authorId` | Foreign Key | **Cascade** | เมื่อลบผู้ใช้ โพสต์ของผู้ใช้นั้นจะถูกลบทั้งหมด ป้องกันข้อมูลกำพร้า (Orphan Data) |
+| `Category -> Post` | `categoryId` | Foreign Key | **Restrict** | ห้ามลบหมวดหมู่หากยังมีโพสต์ผูกอยู่ เพื่อรักษาความสมบูรณ์ของบทความ |
+| `User.email` | `email` | Unique Index | **Reject Duplicate** | ป้องกันการสมัครสมาชิกซ้ำซ้อน และเพิ่มความเร็วในการสืบค้นตอน Login |
+| `Category.name` | `name` | Unique Index | **Reject Duplicate** | ชื่อหมวดหมู่ต้องไม่ซ้ำกันในระบบ |
 
 ---
 
-## 🎓 6 เสาหลักความรู้ Backend ในโปรเจกต์นี้ (Core Learning Concepts)
+## Core Backend Concepts in this Repository
 
 ### 1. Controllers vs Services vs Modules
-- **Controller**: รับ HTTP Request, อ่านค่าพารามิเตอร์ (`@Param`, `@Body`, `@Query`), และตอบกลับผลลัพธ์ **(ห้ามเขียน SQL หรือ Business Logic ที่นี่)**
-- **Service**: ศูนย์รวม Business Logic เช่น การตรวจสอบว่าอีเมลซ้ำหรือไม่, การคำนวณระยะเวลาการอ่านบทความ
-- **Module**: กำแพงล้อมขอบเขตของ Feature ช่วยจัดการการ Export/Import คลาสเพื่อนำไปใช้ซ้ำ
+- **Controller**: รับ HTTP Request, อ่านค่าพารามิเตอร์ (`@Param`, `@Body`, `@Query`), และตอบกลับผลลัพธ์ (ห้ามเขียนคำสั่งฐานข้อมูลที่นี่)
+- **Service**: ศูนย์รวม Business Logic เช่น การตรวจสอบอีเมลซ้ำ, ตรวจสอบสิทธิ์ความเป็นเจ้าของบทความ, การคำนวณสถิติ
+- **Module**: กำแพงล้อมขอบเขตของ Feature จัดการการรวม Component และกำหนด Provider ที่ต้องการ Export ไปใช้งานซ้ำ
 
 ### 2. Dependency Injection (DI) & Inversion of Control (IoC)
-แทนที่เราจะเขียน `const prisma = new PrismaClient()` ในทุกๆ ไฟล์ NestJS จะสร้าง Instance ของ `PrismaService` ให้เพียงครั้งเดียว (Singleton) แล้วส่ง (Inject) เข้ามาใน Constructor ของแต่ละ Service เอง ช่วยให้ Unit Test ง่ายขึ้นและประหยัด Resource
+แทนการประกาศ `new PrismaClient()` หรือ `new Redis()` ในแต่ละไฟล์ NestJS IoC Container จะสร้าง Singleton Instance เพียงครั้งเดียว แล้วส่ง (Inject) เข้าสู่ Constructor ของแต่ละ Service อัตโนมัติ ช่วยลด Memory Overhead และทำให้การเขียน Unit Test สะดวกผ่าน Mocking
 
 ### 3. DTO (Data Transfer Object) & Input Validation
-การรับ Request Body ต้องมีคลาส DTO รองรับเสมอ พร้อม Decorator ตรวจสอบ:
+การรับ Request Body มีคลาส DTO รองรับเสมอ พร้อม Decorator ตรวจสอบ:
 - `@IsEmail()`: ตรวจสอบความถูกต้องของรูปแบบอีเมล
 - `@MinLength(6)`: บังคับความยาวขั้นต่ำ
 - `@IsOptional()`: ใช้สำหรับการ Update ข้อมูลบางส่วน (PATCH)
-- `@Type(() => Number)`: แปลง String เป็น Number อัตโนมัติ
+- `@Type(() => Number)`: แปลงค่า String ให้เป็น Number อัตโนมัติ
 
 ### 4. Custom Global Exception Filters
-เมื่อเกิด Error เราไม่ส่ง Raw Stacktrace ไปให้ผู้ใช้ แต่ดักจับด้วย Exception Filter เพื่อส่งกลับด้วยมาตรฐานเดียวกันเสมอ:
+เมื่อเกิด Error ระบบจะไม่ส่ง Raw Exception Stacktrace ไปยังผู้ใช้ แต่จะแปลงเป็น JSON Format มาตรฐาน:
 ```json
 {
   "statusCode": 400,
@@ -133,189 +179,181 @@ erDiagram
 }
 ```
 
-### 5. API Versioning (v1 vs v2)
-เมื่อระบบโตขึ้น Business Requirement ย่อมเปลี่ยนไป แต่ระบบเดิม (Client เก่า) ยังต้องใช้งานได้:
-- **Version 1 (`/api/v1/posts`)**: คืนค่าบทความทั้งหมดเป็น Array ก้อนเดียว เหมาะสำหรับเว็บขนาดเล็ก
-- **Version 2 (`/api/v2/posts`)**: ปรับปรุงให้รองรับ **Pagination** (`?page=1&limit=10`), ค้นหา Keyword (`?search=...`), และส่งกลับพร้อม Pagination Metadata
+### 5. API Versioning & Performance Optimization
+- **Version 1 (`/api/v1`)**: CRUD พื้นฐาน คืนค่า Flat Array
+- **Version 2 (`/api/v2`)**: แบ่งหน้าด้วย Database Pagination (`skip`, `take`), ค้นหา Keyword (Case-Insensitive), และใช้ `Promise.all` รัน `count` และ `findMany` พร้อมกันเพื่อลดเวลา Query
 
-### 6. Query Optimization with `Promise.all`
-ใน v2 Posts Pagination เราต้องการทั้ง **จำนวนข้อมูลทั้งหมด (`count`)** และ **ข้อมูลของหน้านั้น (`findMany`)** แทนที่จะสั่งทำงานทีละคำสั่ง (Sequential) เราใช้ `Promise.all` สั่งให้ฐานข้อมูลประมวลผลพร้อมกันในระดับ Database ช่วยลด Response Time ลงได้กว่าครึ่ง!
-
-### 7. Cache-Aside Pattern & Safe Invalidation with Redis
-เมื่อมีผู้ใช้งานอ่านบล็อกพร้อมกันจำนวนมาก การคิวรี PostgreSQL ซ้ำๆ จะทำให้ Database CPU พุ่งสูง เราจึงนำ Redis In-Memory Data Store เข้ามาช่วย:
-- **Cache-Aside (Lazy Loading)** บน `GET /api/v2/posts`:
-  1. ดึงจาก Redis ก่อนด้วย Cache Key เช่น `posts:v2:p1:l10:s:c`
-  2. **Cache Hit**: คืนค่ากลับทันที (< 5ms) โดย Database ไม่ต้องทำงานเลย
-  3. **Cache Miss**: คิวรีจาก PostgreSQL -> บันทึกลง Redis พร้อม TTL (Time-To-Live = 60 วินาที) -> คืนค่าให้ Client
-- **Non-blocking Invalidation**: เมื่อมีการ Create, Update หรือ Delete บทความ ระบบจะเรียก `delByPattern('posts:v2:*')` โดยใช้ `scanStream` (ห้ามใช้ `KEYS *` เด็ดขาดเพื่อไม่ให้บล็อก Redis Event Loop) เพื่อล้างแคชรายการบทความทั้งหมด ให้ผู้ใช้เห็นข้อมูลที่สดใหม่อยู่เสมอ
+### 6. Cache-Aside Pattern with Redis
+ใน Endpoint `GET /api/v2/posts`:
+1. ตรวจสอบใน Redis Cache ก่อนด้วย Unique Cache Key (`posts:v2:p<page>:l<limit>:s<search>:c<categoryId>`)
+2. **Cache Hit**: คืนค่ากลับทันที (< 5ms) โดย Database ไม่ต้องทำงาน
+3. **Cache Miss**: คิวรีจาก PostgreSQL -> บันทึกลง Redis พร้อม TTL (60s) -> คืนค่าให้ Client
+4. **Safe Invalidation**: เมื่อมีการ Create, Update หรือ Delete ระบบจะใช้ `scanStream` ล้างแคช `posts:v2:*` แบบ Non-blocking
 
 ---
 
-## 📋 สรุป API Endpoints ทั้งหมด (API Reference)
+## API Endpoints Reference
 
-### 🟢 Version 1 (`/api/v1`) — Standard CRUD
+### Version 1 (`/api/v1`) - Standard CRUD
 
-| Method | Endpoint | สิทธิ์การเข้าถึง (Access) | Description |
+| Method | Endpoint | Access Level | Description |
 |---|---|---|---|
 | `POST` | `/api/v1/auth/register` | Public | สมัครสมาชิกใหม่ (Register & get JWT) |
 | `POST` | `/api/v1/auth/login` | Public | เข้าสู่ระบบ (Login & get JWT) |
-| `GET` | `/api/v1/auth/profile` | 🔒 Authenticated | ดูโปรไฟล์ผู้ใช้ปัจจุบันจาก JWT |
-| `POST` | `/api/v1/users` | Public | สร้างผู้ใช้งาน (Create user) |
-| `GET` | `/api/v1/users` | Public | ดึงรายชื่อผู้ใช้ทั้งหมด (List all users) |
+| `GET` | `/api/v1/auth/profile` | Authenticated | ดูโปรไฟล์ผู้ใช้ปัจจุบันจาก JWT |
+| `POST` | `/api/v1/users` | Public | สร้างผู้ใช้งาน |
+| `GET` | `/api/v1/users` | Public | ดึงรายชื่อผู้ใช้ทั้งหมด |
 | `GET` | `/api/v1/users/:id` | Public | ดึงข้อมูลผู้ใช้รายบุคคลพร้อมบทความที่เขียน |
-| `PATCH` | `/api/v1/users/:id` | Public | แก้ไขข้อมูลผู้ใช้ (Update user) |
-| `DELETE` | `/api/v1/users/:id` | Public | ลบผู้ใช้ (Delete user & cascade posts) |
-| `POST` | `/api/v1/categories` | 🛡️ **ADMIN only** | สร้างหมวดหมู่ใหม่ (Create category) |
+| `PATCH` | `/api/v1/users/:id` | Public | แก้ไขข้อมูลผู้ใช้ |
+| `DELETE` | `/api/v1/users/:id` | Public | ลบผู้ใช้ (Cascade ลบบทความ) |
+| `POST` | `/api/v1/categories` | ADMIN only | สร้างหมวดหมู่ใหม่ |
 | `GET` | `/api/v1/categories` | Public | ดึงหมวดหมู่ทั้งหมดพร้อมจำนวนบทความ (`_count`) |
 | `GET` | `/api/v1/categories/:id` | Public | ดึงหมวดหมู่ตาม ID พร้อมบทความในหมวดหมู่ |
-| `PATCH` | `/api/v1/categories/:id` | 🛡️ **ADMIN only** | แก้ไขชื่อหมวดหมู่ (Update category) |
-| `DELETE` | `/api/v1/categories/:id` | 🛡️ **ADMIN only** | ลบหมวดหมู่ (Delete category - Restrict if has posts) |
-| `POST` | `/api/v1/posts` | 🔒 **Authenticated** | สร้างบทความ (ผูก `authorId` จาก Token อัตโนมัติ) |
+| `PATCH` | `/api/v1/categories/:id` | ADMIN only | แก้ไขชื่อหมวดหมู่ |
+| `DELETE` | `/api/v1/categories/:id` | ADMIN only | ลบหมวดหมู่ (Restrict หากยังมีบทความ) |
+| `POST` | `/api/v1/posts` | Authenticated | สร้างบทความ (ผูก `authorId` จาก Token อัตโนมัติ) |
 | `GET` | `/api/v1/posts` | Public | ดึงบทความทั้งหมดแบบ Flat Array |
 | `GET` | `/api/v1/posts/published` | Public | ดึงเฉพาะบทความที่เผยแพร่แล้ว (`isPublished = true`) |
 | `GET` | `/api/v1/posts/:id` | Public | ดึงบทความตาม ID พร้อมชื่อผู้เขียนและหมวดหมู่ |
-| `PATCH` | `/api/v1/posts/:id` | 🔒 **Owner / Admin** | แก้ไขบทความ (ผู้เขียนเดิม หรือ Admin) |
-| `DELETE` | `/api/v1/posts/:id` | 🔒 **Owner / Admin** | ลบบทความ (ผู้เขียนเดิม หรือ Admin) |
+| `PATCH` | `/api/v1/posts/:id` | Owner / Admin | แก้ไขบทความ (เฉพาะผู้เขียนเดิม หรือ Admin) |
+| `DELETE` | `/api/v1/posts/:id` | Owner / Admin | ลบบทความ (เฉพาะผู้เขียนเดิม หรือ Admin) |
 
 ---
 
-### 🚀 Version 2 (`/api/v2`) — Advanced Endpoints
+### Version 2 (`/api/v2`) - Advanced Endpoints
 
 | Method | Endpoint | Query Parameters | Description |
 |---|---|---|---|
 | `GET` | `/api/v2/posts` | `page`, `limit`, `search`, `categoryId` | คืนค่าบทความแบบแบ่งหน้า พร้อม Redis Caching (TTL 60s) และ Metadata |
 | `GET` | `/api/v2/posts/stats` | - | สรุปสถิติบทความ (Total, Published, Drafts, Categories) |
-| `GET` | `/api/v2/posts/:id` | - | ดึงบทความเดี่ยว พร้อมคำนวณเวลาอ่านและแนะนำบทความที่เกี่ยวข้อง |
+| `GET` | `/api/v2/posts/:id` | - | ดึงบทความเดี่ยว พร้อมคำนวณ Reading Time และแนะนำ Related Posts |
 
-#### ตัวอย่าง Response ของ `GET /api/v2/posts`:
-```json
-{
-  "data": [
-    {
-      "id": 1,
-      "title": "Getting Started with NestJS",
-      "content": "...",
-      "isPublished": true,
-      "author": { "id": 1, "name": "John Doe", "email": "john@example.com" },
-      "category": { "id": 1, "name": "Technology" }
-    }
-  ],
-  "meta": {
-    "total": 25,
-    "page": 1,
-    "limit": 10,
-    "totalPages": 3,
-    "hasNextPage": true,
-    "hasPreviousPage": false
-  }
-}
-```
+### API Capabilities Comparison: V1 vs V2
+
+| Capability | Version 1 (`/api/v1/posts`) | Version 2 (`/api/v2/posts`) |
+|---|---|---|
+| **Data Format** | Flat Array ก้อนเดียว | Paginated Envelope (`data` + `meta`) |
+| **Database Pagination** | ไม่มี (ดึงทั้งหมด) | มี (`skip` และ `take` ตามหน้า) |
+| **Search & Filtering** | ไม่มี | รองรับ Search Keyword และ Filter ตาม Category |
+| **In-Memory Caching** | ไม่มี | มี Redis Cache-Aside (TTL 60s) |
+| **Concurrency Query** | Sequential | Parallel ด้วย `Promise.all` |
+| **Additional Analytics** | ไม่มี | มี `/stats` และการคำนวณ Reading Time |
 
 ---
 
-## ⚡ วิธีติดตั้งและรันโปรเจกต์ (Getting Started)
+## Setup & Running Guide
 
-### ความต้องการของระบบ (Prerequisites)
-- [Node.js](https://nodejs.org/) (v18 หรือใหม่กว่า)
-- [Docker Desktop](https://www.docker.com/) (สำหรับรัน PostgreSQL & Redis Containers)
+### Prerequisites
+- Node.js (v18 หรือใหม่กว่า)
+- Docker Desktop (สำหรับรัน PostgreSQL และ Redis)
 
-### ขั้นตอนการรัน
+### Execution Steps
 
-1. **Clone โปรเจกต์ และติดตั้ง Dependencies:**
+1. **Clone repository และติดตั้ง Dependencies:**
    ```bash
    git clone <repo-url>
    cd nestjs-prisma-blog-api
    npm install
    ```
 
-2. **เปิดโปรแกรม Docker Desktop** บนคอมพิวเตอร์ของคุณ
+2. **เปิดโปรแกรม Docker Desktop**
 
-3. **สั่งรันระบบด้วยคำสั่งเดียว (All-in-one command):**
+3. **รันระบบทั้งหมดด้วยคำสั่งเดียว:**
    ```bash
    npm run start:dev
    ```
-   *สคริปต์จะตรวจสอบ Docker, สตาร์ท PostgreSQL Container บน Port 5433 และ Redis 7 Container บน Port 6379, รอจนฐานข้อมูลพร้อม, ซิงค์ Prisma Schema, และเปิด NestJS Server แบบ Hot Reload ให้อัตโนมัติ!*
+   *สคริปต์จะตรวจสอบ Docker, สตาร์ท PostgreSQL Container บน Port 5433, สตาร์ท Redis Container บน Port 6379, ซิงค์ Prisma Schema, และเปิด NestJS Server แบบ Hot Reload ให้อัตโนมัติ*
 
-4. **เปิดดูเอกสารและทดสอบ API:**
-   - 📚 **Swagger UI**: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
-   - 🌐 **Base API URL**: [http://localhost:3000/api](http://localhost:3000/api)
-
----
-
-## 🔍 การดูและตรวจสอบข้อมูลใน Database & Redis (Inspection Tools)
-
-### 🐘 1. การดูข้อมูลใน PostgreSQL
-* **ทางเลือกที่ 1: DBeaver (GUI Client)**
-  * **Host**: `localhost`
-  * **Port**: `5433` *(สำคัญ: ต้องเป็น 5433 ที่ Map มาจาก Docker ไม่ใช่ 5432)*
-  * **Database**: `nestjs_blog`
-  * **Username / Password**: `postgres` / `postgres`
-* **ทางเลือกที่ 2: Prisma Studio (Web GUI ในตัว ไม่ต้องลงโปรแกรมเพิ่ม)**
-  ```bash
-  npx prisma studio
-  ```
-  เปิดดูและจัดการข้อมูลผ่านเบราว์เซอร์ได้ที่ [http://localhost:5555](http://localhost:5555)
-
-### ⚡ 2. การดูข้อมูลใน Redis
-* **ทางเลือกที่ 1: ดูผ่าน Terminal ด้วย `redis-cli` (ไม่ต้องลงโปรแกรมเพิ่ม)**
-  ```bash
-  # เข้าใช้งาน Redis CLI ใน Docker Container
-  docker exec -it nestjs-blog-redis redis-cli
-
-  # ตัวอย่างคำสั่งที่ใช้บ่อย:
-  KEYS *                           # ดูคีย์ทั้งหมดในแคช
-  GET "posts:v2:p1:l10:s:c"         # ดูข้อมูลในคีย์นั้น (JSON string)
-  TTL "posts:v2:p1:l10:s:c"         # ดูเวลานับถอยหลังก่อนหมดอายุ (วินาที)
-  FLUSHALL                         # ล้างแคชทั้งหมดใน Redis
-  exit                             # ออกจาก redis-cli
-  ```
-* **ทางเลือกที่ 2: Redis Insight (Official GUI ฟรี)**
-  * ดาวน์โหลดที่ [redis.io/insight](https://redis.io/insight/)
-  * เชื่อมต่อด้วย Host: `localhost`, Port: `6379` (ไม่ต้องใส่รหัสผ่าน)
+4. **เปิดดูเอกสาร Swagger UI:**
+   - Swagger UI: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
+   - Base API URL: [http://localhost:3000/api](http://localhost:3000/api)
 
 ---
 
-## 🧪 การทำ Unit Testing ด้วย Vitest & Mocking
+## Database & Cache Inspection Tools
+
+| Tool | Target Storage | Connection Type | Parameters / Command | Primary Use Case |
+|---|---|---|---|---|
+| **DBeaver** | PostgreSQL | Desktop GUI Client | Host: `localhost`, Port: `5433`, DB: `nestjs_blog`, User/Pass: `postgres`/`postgres` | ออกแบบตาราง, รัน SQL Query, จัดการ Index |
+| **Prisma Studio** | PostgreSQL | Browser Web GUI | `npx prisma studio` (เข้าผ่าน `http://localhost:5555`) | ดูและแก้ไขข้อมูล Entity ได้รวดเร็วแบบ Visual Grid |
+| **redis-cli** | Redis | Terminal CLI (Docker) | `docker exec -it nestjs-blog-redis redis-cli` | ตรวจสอบ Key, ดูข้อมูล JSON, เช็คเวลา TTL |
+| **Redis Insight** | Redis | Desktop GUI Client | Host: `localhost`, Port: `6379` (No Password) | มอนิเตอร์ Key, Real-time Memory, TTL Countdown |
+
+### Common Terminal Commands for Redis Inspection:
+```bash
+# 1. เข้าสู่ interactive shell ของ Redis ใน Docker
+docker exec -it nestjs-blog-redis redis-cli
+
+# 2. ดูคีย์ทั้งหมดในแคช
+KEYS *
+
+# 3. ดูข้อมูลในคีย์นั้น (JSON string)
+GET "posts:v2:p1:l10:s:c"
+
+# 4. ดูเวลานับถอยหลังก่อนหมดอายุ (วินาที)
+TTL "posts:v2:p1:l10:s:c"
+
+# 5. ล้างแคชทั้งหมดใน Redis
+FLUSHALL
+
+# 6. ออกจาก redis-cli
+exit
+```
+
+---
+
+## Unit Testing with Vitest
 
 โปรเจกต์นี้ตั้งค่า **Unit Testing** ด้วย **Vitest** และ **`vitest-mock-extended`** ครบถ้วน:
-- **Fast Execution**: รันเทสต์ได้เร็วมาก (เฉลี่ยไม่ถึง 1 วินาที)
-- **Deep Mocking**: ใช้ `mockDeep<PrismaClient>()` จำลอง Database และ Mock Redis Client ทำให้ทดสอบได้โดยไม่ต้องต่อ Network/Service จริง
-- **AAA Pattern (Arrange - Act - Assert)**: โครงสร้างการเขียนเทสต์ที่เป็นระเบียบ อ่านง่าย
+- **Fast Execution**: รันการทดสอบทั้งหมดเสร็จสิ้นในเวลาไม่ถึง 1 วินาที
+- **Deep Mocking**: ใช้ `mockDeep<PrismaClient>()` จำลองพฤติกรรมฐานข้อมูลทั้งหมด ทำให้รันเทสต์ได้โดยไม่ต้องต่อ Network หรือ Database จริง
+- **AAA Pattern**: โครงสร้าง Arrange - Act - Assert ชัดเจน
 
+### Test Suites Breakdown (45 Tests Passed)
+
+| Test Suite File | Tests Count | Scope of Testing |
+|---|---|---|
+| `src/auth/auth.service.spec.ts` | 7 tests | Register with bcrypt, Login with token signing, Invalid password handling |
+| `src/auth/guards/roles.guard.spec.ts` | 3 tests | Role metadata reading, Admin authorization, Insufficient role rejection |
+| `src/categories/categories.service.spec.ts` | 7 tests | Duplicate category prevention, Category CRUD, Restrict check |
+| `src/users/users.service.spec.ts` | 7 tests | Duplicate email check, Password hashing integration, User CRUD |
+| `src/posts/posts.service.spec.ts` | 13 tests | V1 CRUD, Ownership checks (Admin vs Author), V2 Pagination, Cache Hit/Miss, Invalidation |
+| `src/redis/redis.service.spec.ts` | 8 tests | JSON get/set with TTL, Single key delete, Non-blocking scanStream pipeline, Lifecycle |
+
+### Test Commands
 ```bash
-# 1. รัน Unit Test ทั้งหมด 45 ข้อ (Auth, RolesGuard, Categories, Users, Posts, Redis)
+# รัน Unit Test ทั้งหมด 45 ข้อ
 npm test
 
-# 2. รัน Test แบบ Watch Mode (จะเทสต์ใหม่อัตโนมัติเมื่อแก้โค้ด)
+# รัน Test แบบ Watch Mode (Hot Reload เมื่อโค้ดเปลี่ยน)
 npm run test:watch
 
-# 3. รัน Test พร้อมดูรายงาน Code Coverage
+# รัน Test พร้อมรายงาน Code Coverage
 npm run test:cov
 ```
 
 ---
 
-## 🛠️ รายการคำสั่ง NPM Scripts (Useful Commands)
+## Useful NPM Scripts
 
-| Command | หน้าที่ |
+| Command | Description |
 |---|---|
-| `npm run start:dev` | รัน Docker (Postgres + Redis) + Sync Schema + รัน NestJS Server ครบจบในคำสั่งเดียว |
+| `npm run start:dev` | รัน Docker (Postgres + Redis) + Sync Schema + รัน NestJS Server อัตโนมัติ |
 | `npm run start:dev:only` | รันเฉพาะ NestJS Server (กรณีที่ Database & Redis รันอยู่แล้ว) |
 | `npm run db:stop` | ปิดทั้ง PostgreSQL และ Redis Docker Containers |
 | `npm test` | รัน Unit Tests ทั้งหมดด้วย Vitest (45 tests) |
-| `npm run test:watch` | รัน Unit Tests แบบโหมด Watch (Hot Reload Tests) |
+| `npm run test:watch` | รัน Unit Tests แบบโหมด Watch |
 | `npm run test:cov` | ตรวจสอบ Code Coverage รายงานเปอร์เซ็นต์โค้ดที่ถูกทดสอบ |
-| `npx prisma studio` | เปิด Web GUI ดูและจัดการข้อมูลใน Database ด้วย Prisma Studio |
+| `npx prisma studio` | เปิด Web GUI ดูและจัดการข้อมูลใน Database |
 | `npx prisma db push` | ซิงค์ Schema จาก `schema.prisma` ไปยัง Database โดยตรง |
 | `npm run build` | คอมไพล์โปรเจกต์ TypeScript เป็น JavaScript ในโฟลเดอร์ `dist/` |
 
 ---
 
-## 🗺️ เส้นทางพัฒนาต่อยอดสู่ Senior Backend (Next Steps for Career Growth)
+## Next Steps for Career Growth
 
-เพื่อยกระดับโปรเจกต์นี้ให้พร้อมสำหรับ Production ระดับสูง:
-1. ✅ **Authentication & Authorization**: ติดตั้ง `@nestjs/jwt` และ `passport` ทำระบบ Login, Register, และ Role-Based Access Control (Admin vs Author)
-2. ✅ **Password Hashing**: ใช้ `bcrypt` เข้ารหัสผ่านก่อนบันทึกลงฟิลด์ `password` ในฐานข้อมูล
-3. ✅ **Caching with Redis**: แคชผลลัพธ์ของ `GET /api/v2/posts` ด้วย Redis เพื่อลดภาระการคิวรีฐานข้อมูล พร้อมระบบ Safe Invalidation
-4. **File Uploads**: รองรับการอัปโหลดรูปภาพหน้าปกบทความ (Cover Image) ไปยัง AWS S3 หรือ Cloudinary
-5. **E2E Testing**: เขียน Integration/End-to-End Test ด้วย Vitest และ Supertest เพื่อการันตี HTTP Flow ทั้งหมด
+- [COMPLETED] **Authentication & Authorization**: ติดตั้ง `@nestjs/jwt` และ `passport` ทำระบบ Login, Register และ RBAC
+- [COMPLETED] **Password Hashing**: ใช้ `bcrypt` เข้ารหัสผ่านก่อนบันทึกลงฐานข้อมูล
+- [COMPLETED] **Caching with Redis**: แคชผลลัพธ์ของ `GET /api/v2/posts` ด้วย Redis พร้อมระบบ Non-blocking Invalidation
+- [PLANNED] **File Uploads**: รองรับการอัปโหลดรูปภาพหน้าปกบทความ (Cover Image) ไปยัง AWS S3 หรือ Cloudinary
+- [PLANNED] **Integration & E2E Testing**: เขียน Integration / End-to-End Test ด้วย Vitest และ Supertest เพื่อการันตี HTTP Flow ทั้งหมด

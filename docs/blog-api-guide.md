@@ -1,11 +1,11 @@
-# 📘 NestJS Master Guide: From Zero to Backend Developer
+# NestJS Master Guide: From Zero to Backend Developer
 *คู่มือเรียนรู้พื้นฐาน Backend Development ครบวงจรด้วย NestJS, PostgreSQL & Prisma*
 
-> 🗺️ **ต้องการลำดับการเริ่มอ่านและไฟล์ที่ต้องสำรวจทีละสเต็ป?** เข้าไปดู [Roadmap การเรียนรู้ (LEARNING_ROADMAP.md)](./LEARNING_ROADMAP.md)
+> [ROADMAP] ต้องการลำดับการเริ่มอ่านและไฟล์ที่ต้องสำรวจทีละสเต็ป? เข้าไปดู [Roadmap การเรียนรู้ (LEARNING_ROADMAP.md)](./LEARNING_ROADMAP.md)
 
 ---
 
-## 🎯 สารบัญ (Table of Contents)
+## สารบัญ (Table of Contents)
 1. [ภาพรวมสถาปัตยกรรม NestJS (NestJS Architecture Overview)](#1-ภาพรวมสถาปัตยกรรม-nestjs)
 2. [การออกแบบฐานข้อมูลด้วย Prisma ORM (Database Design & Relations)](#2-การออกแบบฐานข้อมูลด้วย-prisma-orm)
 3. [DTO และระบบการตรวจสอบความถูกต้อง (DTOs & Validation)](#3-dto-และระบบการตรวจสอบความถูกต้อง)
@@ -20,24 +20,26 @@
 
 ## 1. ภาพรวมสถาปัตยกรรม NestJS
 
-NestJS ใช้โครงสร้างแบบ **Three-Tier Architecture** ตามหลัก **Separation of Concerns (SoC)**:
+NestJS ใช้โครงสร้างแบบ **Three-Tier Layered Architecture** ตามหลัก **Separation of Concerns (SoC)** โดยแยกส่วนการทำงานเป็น 3 ชั้นหลัก:
 
 ```mermaid
 flowchart TD
-    subgraph Presentation ["1. Presentation Layer (การนำเสนอ & รับส่งข้อมูล)"]
-        Controller["Controllers\n(users.controller.ts, posts.controller.ts)"]
+    subgraph Presentation ["1. Presentation Layer (รับส่งข้อมูลและจัดเส้นทาง)"]
+        Controller["Controllers\n(posts.controller.ts, users.controller.ts)"]
         DTO["DTOs\n(create-post.dto.ts, etc.)"]
         Validation["ValidationPipe\n(whitelist, transform)"]
     end
 
-    subgraph Business ["2. Business Logic Layer (ชั้นตรรกะทางธุรกิจ)"]
-        Service["Services\n(posts.service.ts, users.service.ts)"]
-        Rules["Business Rules\n(Check duplicate email, verify author & category)"]
+    subgraph Business ["2. Business Logic Layer (ประมวลผลตรรกะทางธุรกิจ)"]
+        Service["Services\n(posts.service.ts, auth.service.ts)"]
+        Rules["Business Rules\n(Password check, ownership check, duplicate prevention)"]
     end
 
-    subgraph Data ["3. Data Access Layer (ชั้นจัดการฐานข้อมูล)"]
-        PrismaSvc["PrismaService\n(PrismaClient wrapper)"]
-        DB[(PostgreSQL 16)]
+    subgraph Data ["3. Data Access Layer (ติดต่อจัดการข้อมูล)"]
+        PrismaSvc["PrismaService\n(PrismaClient Wrapper)"]
+        RedisSvc["RedisService\n(In-Memory Cache Client)"]
+        DB[(PostgreSQL 16 Engine)]
+        Redis[(Redis 7 Engine)]
     end
 
     Controller --> Validation
@@ -45,15 +47,17 @@ flowchart TD
     Controller --> Service
     Service --> Rules
     Service --> PrismaSvc
+    Service --> RedisSvc
     PrismaSvc --> DB
+    RedisSvc --> Redis
 ```
 
-### 💡 Core Backend Principles:
+### Core Architectural Principles
 | Concept | หน้าที่ใน NestJS | ตัวอย่างในโค้ด |
 |---|---|---|
-| **Controller** | กำหนด HTTP Methods (`GET`, `POST`, `PATCH`, `DELETE`) และจับคู่กับ URL path | `posts.controller.ts` |
-| **Service** | ประมวลผลตรรกะ, คำนวณข้อมูล, ติดต่อฐานข้อมูล | `posts.service.ts` |
-| **Module** | รวมกลุ่ม Component ที่เกี่ยวข้องกัน และกำหนดสิ่งที่เปิดให้คนอื่นใช้ (`exports`) | `posts.module.ts` |
+| **Controller** | กำหนด HTTP Methods (`GET`, `POST`, `PATCH`, `DELETE`) และจับคู่กับ URL path | `src/posts/posts.controller.ts` |
+| **Service** | ประมวลผลตรรกะ, คำนวณข้อมูล, ติดต่อฐานข้อมูลหรือระบบภายนอก | `src/posts/posts.service.ts` |
+| **Module** | รวมกลุ่ม Component ที่เกี่ยวข้องกัน และกำหนดสิ่งที่เปิดให้โมดูลอื่นใช้งาน (`exports`) | `src/posts/posts.module.ts` |
 | **Dependency Injection** | ส่ง Service เข้าไปใน Constructor อัตโนมัติ โดยไม่ต้อง `new` เอง | `constructor(private readonly prisma: PrismaService) {}` |
 
 ---
@@ -64,50 +68,51 @@ flowchart TD
 
 ```mermaid
 erDiagram
-    users ||--o{ posts : "author (Cascade Delete)"
-    categories ||--o{ posts : "category (Restrict Delete)"
+    users ||--o{ posts : "authorId (Cascade Delete)"
+    categories ||--o{ posts : "categoryId (Restrict Delete)"
 
     users {
         int id PK
-        string email UK "ห้ามซ้ำ"
-        string password "เข้ารหัส"
-        string name "ชื่อผู้ใช้"
+        string email UK "Unique Index"
+        string password "Hashed bcrypt"
+        string name "Full Name"
+        Role role "ADMIN | AUTHOR"
         datetime createdAt
         datetime updatedAt
     }
 
     categories {
         int id PK
-        string name UK "ชื่อหมวดหมู่ห้ามซ้ำ"
+        string name UK "Unique Index"
         datetime createdAt
         datetime updatedAt
     }
 
     posts {
         int id PK
-        string title "หัวข้อ"
-        string content "เนื้อหา"
-        boolean isPublished "สถานะเผยแพร่"
-        int authorId FK "ชี้ไปที่ users.id"
-        int categoryId FK "ชี้ไปที่ categories.id"
+        string title "Post Title"
+        string content "Post Body"
+        boolean isPublished "Publish Flag"
+        int authorId FK "References users.id"
+        int categoryId FK "References categories.id"
         datetime createdAt
         datetime updatedAt
     }
 ```
 
-### 🔑 Referential Integrity Actions (เงื่อนไขความสัมพันธ์):
+### Referential Integrity Constraints Matrix
 1. **`onDelete: Cascade` (User -> Post)**
-   - หากลบ User เจ้าของบัญชี ระบบจะลบบทความทั้งหมดของเขาไปด้วยอัตโนมัติ
-   - ป้องกันไม่ให้มีบทความที่ `authorId` ชี้ไปหา User ที่ไม่มีตัวตน
+   - เมื่อลบ User ผู้เขียน บทความทั้งหมดที่ผู้ใช้นี้เขียนจะถูกลบตามทันทีอัตโนมัติ
+   - ป้องกันไม่ให้มีบทความที่ `authorId` ชี้ไปหา User ที่ไม่มีตัวตนในตาราง
 2. **`onDelete: Restrict` (Category -> Post)**
    - หาก Category ยังมี Post อ้างอิงอยู่ Database จะ**ปฏิเสธคำสั่งลบ**
-   - ช่วยรักษาข้อมูลบทความ ไม่ให้หมวดหมู่ของบทความสูญหาย
+   - ช่วยรักษาข้อมูลบทความ ไม่ให้หมวดหมู่ของบทความสูญหายจนกลายเป็นข้อมูลกำพร้า
 
 ---
 
 ## 3. DTO และระบบการตรวจสอบความถูกต้อง
 
-**DTO (Data Transfer Object)** คือคลาสที่ใช้ระบุหน้าตาและข้อกำหนดของข้อมูลที่ Client ส่งมา
+**DTO (Data Transfer Object)** คือคลาสที่ใช้ระบุโครงสร้างและข้อกำหนดของข้อมูลที่ Client ส่งมาใน Request Body หรือ Query String
 
 ### ตัวอย่าง: `CreatePostDto` (`src/posts/dto/create-post.dto.ts`)
 ```typescript
@@ -125,7 +130,7 @@ export class CreatePostDto {
 }
 ```
 
-### 🛡️ ความปลอดภัยที่ได้จาก `ValidationPipe` ใน `src/main.ts`:
+### ความปลอดภัยที่ได้จาก `ValidationPipe` ใน `src/main.ts`
 - `whitelist: true`: ตัดฟิลด์แปลกปลอมที่ Client แอบส่งมาทิ้ง ป้องกันการแฮกแก้ไขฟิลด์สำคัญ (Mass Assignment)
 - `forbidNonWhitelisted: true`: แจ้ง Error 400 ทันทีหากส่งฟิลด์ที่ไม่ตรงกับ DTO
 - `transform: true`: แปลงชนิดข้อมูลจาก JSON payload ให้เป็น Object Instance ของ DTO ตาม Type จริง
@@ -169,48 +174,49 @@ app.enableVersioning({
 });
 ```
 
-### การเปรียบเทียบ v1 vs v2:
-| มิติ | Version 1 (`/api/v1`) | Version 2 (`/api/v2`) |
-|---|---|---|
-| **การดึงบทความทั้งหมด** | ส่งกลับเป็น Array ทั้งก้อน (Raw Flat Array) | แบ่งหน้าด้วย **Pagination** (`page`, `limit`) |
-| **การค้นหา** | ไม่มีระบบค้นหา | รองรับ Search Keyword และ Filter ตาม Category |
-| **ระบบแคช (Redis)** | ไม่มีแคช | มี In-Memory Cache (Cache-Aside TTL 60s) |
-| **ข้อมูลสถิติ** | ไม่มี | มี Endpoint `/api/v2/posts/stats` รวมสถิติทั้งระบบ |
-| **ข้อมูลเสริม** | ข้อมูลบทความพื้นฐาน | เพิ่มการคำนวณ **Reading Time** และ **Related Posts** |
+### การเปรียบเทียบความสามารถ: Version 1 vs Version 2
 
-### ⚠️ กฎสำคัญ: Route Precedence (ลำดับของ Route)
+| มิติการทำงาน | Version 1 (`/api/v1`) | Version 2 (`/api/v2`) |
+|---|---|---|
+| **การดึงบทความทั้งหมด** | ส่งกลับเป็น Array ทั้งก้อน (Raw Flat Array) | แบ่งหน้าด้วย **Database Pagination** (`skip`, `take`) |
+| **การค้นหาและกรองข้อมูล** | ไม่มีระบบค้นหา | รองรับ Search Keyword และ Filter ตาม Category |
+| **ระบบแคช (Redis)** | ไม่มีแคช วิ่งเข้า Database ทุกครั้ง | มี In-Memory Cache (Cache-Aside TTL 60s) |
+| **ข้อมูลสถิติภาพรวม** | ไม่มี | มี Endpoint `/api/v2/posts/stats` รวมสถิติทั้งระบบ |
+| **การคำนวณข้อมูลเสริม** | ข้อมูลบทความพื้นฐาน | เพิ่มการคำนวณ **Reading Time** และ **Related Posts** |
+
+### กฎสำคัญ: Route Precedence (ลำดับการประกาศ Route)
 ใน `src/posts/posts-v2.controller.ts`:
 ```typescript
-// ✅ ถูกต้อง: Static route ต้องอยู่ก่อน Dynamic param route
+// ถูกต้อง: Static route ต้องอยู่ก่อน Dynamic param route
 @Get('stats')
 getStats() { ... }
 
 @Get(':id')
 findOne(@Param('id', ParseIntPipe) id: number) { ... }
 ```
-*หากวาง `@Get(':id')` ไว้ก่อน เมื่อมี Request มาที่ `/posts/stats` ตัวแปลงจะมองว่าคำว่า "stats" คือ ID แล้วแปลงเป็นตัวเลขไม่ผ่าน เกิด Error 400 ทันที!*
+*หากวาง `@Get(':id')` ไว้ก่อน เมื่อมี Request มาที่ `/posts/stats` ตัวแปลงจะมองว่าคำว่า "stats" คือ ID แล้วแปลงเป็นตัวเลขไม่ผ่าน เกิด Error 400 ทันที*
 
 ---
 
 ## 6. การตั้งค่าและการรันระบบ
 
-### 🚀 รันโปรเจกต์ด้วยคำสั่งเดียว:
+### รันโปรเจกต์ด้วยคำสั่งเดียว:
 ```bash
 npm run start:dev
 ```
 *สคริปต์ `scripts/start-dev.sh` จะเปิด Docker PostgreSQL (Port 5433) และ Redis 7 (Port 6379), ตรวจสอบความพร้อม, ซิงค์ Prisma Schema, และรัน NestJS Server อัตโนมัติ*
 
-### 📚 ลิงก์สำคัญ:
+### ลิงก์สำคัญ:
 - **Swagger Documentation**: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
 - **API Base URL**: [http://localhost:3000/api](http://localhost:3000/api)
 
-### 🔍 การเชื่อมต่อดูข้อมูลใน PostgreSQL:
-- **DBeaver**:
+### การเชื่อมต่อดูข้อมูลใน PostgreSQL:
+- **DBeaver (GUI Desktop)**:
   - Host: `localhost`
   - Port: `5433` *(พอร์ตที่แมปจาก Docker Container)*
   - Database: `nestjs_blog`
   - User / Password: `postgres` / `postgres`
-- **Prisma Studio**:
+- **Prisma Studio (Web GUI)**:
   ```bash
   npx prisma studio   # เปิดดูตารางผ่าน Web UI ที่ http://localhost:5555
   ```
@@ -221,7 +227,26 @@ npm run start:dev
 
 โปรเจกต์นี้ใช้ **Vitest** ควบคู่กับ **`vitest-mock-extended`** เพื่อทดสอบ Business Logic ในแต่ละ Service โดยไม่ต้องต่อ Database หรือ Redis จริง
 
-### ไฟล์ทดสอบทั้งหมด (45 tests):
+### สถาปัตยกรรม Isolation ใน Unit Test
+
+```mermaid
+flowchart LR
+    subgraph TestEnvironment ["Isolated Test Runner (Vitest In-Memory)"]
+        TestSpec["posts.service.spec.ts"]
+        Service["PostsService (Real Instance)"]
+        PrismaMock["PrismaClient (Deep Mock Proxy)"]
+        RedisMock["RedisService (Mock Function)"]
+    end
+
+    TestSpec -->|Calls method| Service
+    Service -->|Executes query| PrismaMock
+    Service -->|Executes cache| RedisMock
+    PrismaMock -.->|Simulated Data| Service
+    RedisMock -.->|Simulated Cache| Service
+    Service -.->|Assert Result| TestSpec
+```
+
+### รายการ Test Suites ทั้งหมด (45 Tests):
 - `src/auth/auth.service.spec.ts` (7 tests)
 - `src/auth/guards/roles.guard.spec.ts` (3 tests)
 - `src/categories/categories.service.spec.ts` (7 tests)
@@ -229,7 +254,7 @@ npm run start:dev
 - `src/posts/posts.service.spec.ts` (13 tests: V1 CRUD, Ownership, V2 Pagination, Cache Hit/Miss, Invalidation)
 - `src/redis/redis.service.spec.ts` (8 tests: get, set with TTL, del, delByPattern via scanStream)
 
-### 💡 Pattern การเขียน Unit Test (AAA Pattern):
+### รูปแบบการเขียน Unit Test (AAA Pattern):
 ```typescript
 it('ควรสร้างหมวดหมู่สำเร็จเมื่อชื่อไม่ซ้ำ', async () => {
   // 1. Arrange: ตั้งค่า Mock ให้ findUnique ตอบ null (ไม่ซ้ำ)
@@ -256,59 +281,120 @@ npm run test:cov    # รายงาน Coverage
 
 ## 8. ระบบยืนยันตัวตนและการจำกัดสิทธิ์ (Auth & RBAC)
 
-### 🔒 1. Password Hashing ด้วย bcrypt
+### 1. แผนภาพลำดับการทำงาน (Authentication Sequence Diagram)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as Client / Frontend
+    participant Auth as AuthController
+    participant Svc as AuthService
+    participant DB as Prisma (PostgreSQL)
+    participant JWT as JwtService
+    participant Strat as JwtStrategy (Guard)
+
+    Note over Client, JWT: Phase 1: User Login & Token Issuance
+    Client->>Auth: POST /api/v1/auth/login (email, password)
+    Auth->>Svc: login(loginDto)
+    Svc->>DB: findUnique({ where: { email } })
+    DB-->>Svc: user record (hashed password)
+    Svc->>Svc: bcrypt.compare(password, user.password)
+    Svc->>JWT: sign({ sub: id, email, role })
+    JWT-->>Svc: Access Token String
+    Svc-->>Auth: { accessToken }
+    Auth-->>Client: 200 OK with Bearer Token
+
+    Note over Client, Strat: Phase 2: Authenticated Request to Protected Route
+    Client->>Auth: POST /api/v1/posts (Header: Bearer Token)
+    Auth->>Strat: Extract & Validate Signature
+    Strat->>DB: findUnique({ where: { id: payload.sub } })
+    DB-->>Strat: user profile
+    Strat-->>Auth: Attach user to req.user
+    Auth->>Auth: Pass to Controller Handler
+```
+
+### 2. Password Hashing ด้วย bcrypt
 - รหัสผ่านก่อนบันทึกลงฟิลด์ `password` ใน Database จะต้องผ่าน `bcrypt.hash(password, 10)` เสมอ
 - ตอน Login จะใช้ `bcrypt.compare(loginPassword, user.password)` ในการตรวจสอบความถูกต้อง
 
-### 🔑 2. JWT & Passport Strategy
-- หลังจาก Login สำเร็จ ระบบจะออก JWT Access Token บรรจุ Payload `{ sub: user.id, email, role }`
-- ฝั่ง Client แนบ Token ใน Header: `Authorization: Bearer <token>`
-- `JwtStrategy` ทำหน้าที่ตรวจสอบลายเซ็นและดึง User Object มาเก็บไว้ใน `req.user`
-- เข้าถึงข้อมูลผู้ใช้ใน Controller ผ่าน Decorator `@CurrentUser()`
+### 3. Role-Based Access Control & Ownership Verification Flow
 
-### 🛡️ 3. Role-Based Access Control (RBAC) & Ownership Protection
-- **`@Roles(Role.ADMIN)`**: กำหนดบทบาทที่ได้รับอนุญาตให้เรียกใช้ Endpoint
-- **`RolesGuard`**: ตรวจสอบว่า Role ใน Token ตรงกับที่กำหนดไว้หรือไม่ หากไม่ตรงจะโยน `403 Forbidden`
-- **Ownership Verification**:
-  - `POST /api/v1/posts`: ผู้ใช้สร้างบทความได้โดย **`authorId` จะผูกกับ ID ใน Token อัตโนมัติ**
-  - `PATCH /api/v1/posts/:id` และ `DELETE /api/v1/posts/:id`:
-    - `AUTHOR`: แก้ไขหรือลบได้**เฉพาะบทความของตนเอง**
-    - `ADMIN`: สามารถแก้ไขหรือลบบทความของใครก็ได้
+```mermaid
+flowchart TD
+    Req([Request to Modify Post: PATCH/DELETE /posts/:id]) --> CheckAuth{"Is Authenticated?\n(JwtAuthGuard)"}
+    CheckAuth -- "No" --> Ret401["401 Unauthorized"]
+    CheckAuth -- "Yes" --> FindPost["Find Post by ID"]
+    
+    FindPost -- "Post Not Found" --> Ret404["404 Not Found"]
+    FindPost -- "Post Exists" --> CheckRole{"User Role == ADMIN?"}
+    
+    CheckRole -- "Yes" --> AllowAdmin["Allow Mutation (Admin Privilege)"]
+    CheckRole -- "No (AUTHOR)" --> CheckOwner{"post.authorId == currentUser.id?"}
+    
+    CheckOwner -- "Yes" --> AllowAuthor["Allow Mutation (Resource Owner)"]
+    CheckOwner -- "No" --> Ret403["403 Forbidden\n(Cannot touch other's post)"]
+```
 
 ---
 
 ## 9. ระบบแคชและ Invalidation ด้วย Redis (In-Memory Caching)
 
-### ⚡ 1. ทำไมระบบ Backend ต้องมี Cache Layer?
+### 1. ทำไมระบบ Backend ต้องมี Cache Layer?
 ในแอปพลิเคชันที่มีผู้ใช้งานพร้อมกันจำนวนมาก Endpoint ที่ถูกเรียกบ่อยที่สุดคือการอ่านข้อมูล (Read Queries เช่น `GET /api/v2/posts`) หากทุก Request วิ่งตรงไปยัง PostgreSQL Database:
 - Database CPU จะทำงานหนักและเกิด Connection Pool Exhaustion
 - Response Time ช้าลงตามขนาดข้อมูลและความซับซ้อนของ Query (`count`, `findMany`, `ORDER BY`, `LIMIT`)
-- การนำ **Redis** ซึ่งเก็บข้อมูลใน **RAM (In-Memory)** มาเป็นตัวกลาง จะลด Response Time จาก ~50-100ms เหลือเพียง **< 5ms**!
+- การนำ **Redis** ซึ่งเก็บข้อมูลใน **RAM (In-Memory)** มาเป็นตัวกลาง จะลด Response Time จาก ~50-100ms เหลือเพียง **ต่ำกว่า 5ms**
 
-### 🔄 2. กลยุทธ์ Cache-Aside Pattern (Lazy Loading)
-ระบบนำ Pattern นี้มาประยุกต์ใช้ใน `PostsService.findAllV2`:
+### 2. Cache-Aside Sequence Diagram (Hit vs Miss)
+
 ```mermaid
-flowchart TD
-    Req([Client Request:\nGET /api/v2/posts?page=1&limit=10]) --> Check{"1. ตรวจสอบ Redis Cache\nKey: posts:v2:p1:l10:s:c"}
-    Check -- "Cache Hit (มีข้อมูล)" --> RetCached["คืนค่าจาก Redis ทันที (< 5ms)\n🎉 Database ไม่ต้องทำงาน"]
-    Check -- "Cache Miss (ไม่มีข้อมูล)" --> QueryDB["2. คิวรี PostgreSQL ผ่าน Prisma\n(Promise.all count & findMany)"]
-    QueryDB --> SaveCache["3. บันทึกผลลัพธ์ลง Redis\n(TTL = 60 วินาที)"]
-    SaveCache --> RetFresh["คืนค่าข้อมูลล่าสุดให้ Client"]
-    RetCached --> Resp([Client Response])
-    RetFresh --> Resp
+sequenceDiagram
+    autonumber
+    actor Client as Client / User
+    participant Service as PostsService
+    participant Cache as RedisService (Port 6379)
+    participant DB as PostgreSQL (Port 5433)
+
+    Client->>Service: GET /api/v2/posts?page=1&limit=10
+    Service->>Cache: 1. get("posts:v2:p1:l10:s:c")
+    
+    alt Cache Hit (มีข้อมูลในแคช)
+        Cache-->>Service: Return Cached JSON
+        Service-->>Client: 200 OK (< 5ms response, DB untouched)
+    else Cache Miss (ไม่มีข้อมูลในแคช)
+        Cache-->>Service: Return null
+        Service->>DB: 2. Promise.all([count, findMany])
+        DB-->>Service: Fresh Database Records
+        Service->>Cache: 3. set("posts:v2:p1:l10:s:c", data, TTL=60s)
+        Service-->>Client: 200 OK (Fresh Data)
+    end
 ```
 
-### 🧹 3. ระบบ Cache Invalidation (การล้างแคชอย่างปลอดภัย)
-เมื่อแคชหมดอายุตามเวลา (TTL 60 วินาที) หรือมีการเปลี่ยนแปลงข้อมูล (Mutation):
-- เมื่อมีการเรียกคำสั่ง **`create`**, **`update`**, หรือ **`remove`** ใน `PostsService`
+### 3. ระบบ Cache Invalidation (การล้างแคชอย่างปลอดภัย)
+เมื่อมีการเปลี่ยนแปลงข้อมูลผ่านคำสั่ง **`create`**, **`update`**, หรือ **`remove`** ใน `PostsService`:
 - Service จะส่งคำสั่งล้างแคช: `await this.redisService.delByPattern('posts:v2:*');`
 - เพื่อให้ Client ที่เรียก `GET /api/v2/posts` ในครั้งถัดไป ได้รับข้อมูลที่ตรงกับความจริงใน Database เสมอ (Data Consistency)
 
-> [!CAUTION] Production Warning: ห้ามใช้ `KEYS *` เด็ดขาด!
-> Redis ทำงานด้วยสถาปัตยกรรม Single-Threaded หากใช้คำสั่ง `KEYS *` ค้นหาข้อมูลใน Production ที่มีคีย์หลักแสน/หลักล้าน Redis จะถูกบล็อกจนระบบค้างทั้งหมด!
+```mermaid
+flowchart TD
+    Mutation([Mutation Request: Create, Update, Delete Post]) --> DBExec["Execute Database Change in PostgreSQL"]
+    DBExec --> InvalidateCache["delByPattern('posts:v2:*')"]
+    
+    subgraph NonBlockingStream ["Non-blocking Redis Invalidation (Safe)"]
+        ScanStream["client.scanStream({ match: 'posts:v2:*', count: 100 })"]
+        BatchPipe["Pipeline Batch Delete Keys"]
+        ScanStream --> BatchPipe
+    end
+    
+    InvalidateCache --> NonBlockingStream
+    NonBlockingStream --> Complete([Cache Purged Successfully])
+```
+
+> [!CAUTION] Production Warning: ห้ามใช้คำสั่ง `KEYS *` เด็ดขาด
+> Redis ทำงานด้วยสถาปัตยกรรม Single-Threaded หากใช้คำสั่ง `KEYS *` ค้นหาข้อมูลใน Production ที่มีคีย์หลักแสนหรือหลักล้าน Redis จะถูกบล็อกจนระบบค้างทั้งหมด
 > ในโปรเจกต์นี้ `RedisService.delByPattern` ใช้ **`scanStream`** (`SCAN`) ซึ่งทำงานแบบ **Non-blocking Batch Iteration** ลบทีละชุดอย่างปลอดภัยต่อ Production 100%
 
-### 🖥️ 4. วิธีตรวจสอบข้อมูลใน Redis (CLI & GUI Tools)
+### 4. วิธีตรวจสอบข้อมูลใน Redis (CLI & GUI Tools)
 1. **ดูผ่าน Terminal ด้วย `redis-cli` (ผ่าน Docker Container):**
    ```bash
    # เข้าสู่ interactive shell ของ Redis ใน Docker
@@ -325,4 +411,3 @@ flowchart TD
    - ดาวน์โหลดที่ [redis.io/insight](https://redis.io/insight/)
    - กด **Add Redis Database** -> กรอก Host: `localhost`, Port: `6379`
    - สามารถดู Key, Value, TTL, และสถิติ Memory Usage ได้แบบ Real-time Graphical Interface
-
