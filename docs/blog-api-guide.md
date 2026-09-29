@@ -207,6 +207,7 @@ npm run start:dev
 *สคริปต์ `scripts/start-dev.sh` จะเปิด Docker PostgreSQL (Port 5433) และ Redis 7 (Port 6379), ตรวจสอบความพร้อม, ซิงค์ Prisma Schema, และรัน NestJS Server อัตโนมัติ*
 
 ### ลิงก์สำคัญ:
+- **Scalar Documentation (Modern Client)**: [http://localhost:3000/api/reference](http://localhost:3000/api/reference)
 - **Swagger Documentation**: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
 - **API Base URL**: [http://localhost:3000/api](http://localhost:3000/api)
 

@@ -264,7 +264,8 @@ erDiagram
    ```
    *สคริปต์จะตรวจสอบ Docker, สตาร์ท PostgreSQL Container บน Port 5433, สตาร์ท Redis Container บน Port 6379, ซิงค์ Prisma Schema, และเปิด NestJS Server แบบ Hot Reload ให้อัตโนมัติ*
 
-4. **เปิดดูเอกสาร Swagger UI:**
+4. **เปิดดูเอกสารและทดสอบ API:**
+   - Scalar UI (Modern Client): [http://localhost:3000/api/reference](http://localhost:3000/api/reference)
    - Swagger UI: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
    - Base API URL: [http://localhost:3000/api](http://localhost:3000/api)
 

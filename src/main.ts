@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { apiReference } from '@scalar/nestjs-api-reference';
 import { AppModule } from './app.module.js';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
@@ -100,12 +101,23 @@ async function bootstrap() {
   // ให้บริการ Swagger UI ที่พาธ `/api/docs`
   SwaggerModule.setup('api/docs', app, document);
 
-  // 8. เริ่มต้นรับฟัง HTTP Request บน Port ที่กำหนด (Default คือ 3000)
+  // 8. ให้บริการ Modern Interactive API Documentation ด้วย Scalar ที่พาธ `/api/reference`
+  app.use(
+    '/api/reference',
+    apiReference({
+      spec: {
+        content: document,
+      },
+    }),
+  );
+
+  // 9. เริ่มต้นรับฟัง HTTP Request บน Port ที่กำหนด (Default คือ 3000)
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
 
-  console.log(`🚀 Application is running on: http://localhost:${port}/api`);
-  console.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);
+  console.log(`[SERVER] Application is running on: http://localhost:${port}/api`);
+  console.log(`[SWAGGER] Swagger documentation: http://localhost:${port}/api/docs`);
+  console.log(`[SCALAR] Scalar API reference: http://localhost:${port}/api/reference`);
 }
 
 // เริ่มต้นรันฟังก์ชัน bootstrap
