@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
 /**
  * ==============================================================================
@@ -35,14 +35,16 @@ export class QueryPostV2Dto {
   @Max(50)
   limit?: number = 10;
 
-  @ApiPropertyOptional({ example: 'NestJS', description: 'Search keyword matching title or content' })
+  @ApiPropertyOptional({ example: 'NestJS', description: 'Search keyword matching title or content (max 200 chars)', maxLength: 200 })
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   search?: string;
 
-  @ApiPropertyOptional({ example: 1, description: 'Filter posts by specific Category ID' })
+  @ApiPropertyOptional({ example: 1, description: 'Filter posts by specific Category ID (minimum: 1)', minimum: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
+  @Min(1)
   categoryId?: number;
 }

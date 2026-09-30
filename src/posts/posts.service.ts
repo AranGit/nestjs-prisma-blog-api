@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RedisService } from '../redis/redis.service.js';
 import { CreatePostDto } from './dto/create-post.dto.js';
@@ -83,6 +83,7 @@ export class PostsService {
   async findAll() {
     return this.prisma.post.findMany({
       where: { deletedAt: null },
+      take: 100, // Safety limit: ป้องกัน memory exhaustion จากข้อมูลขนาดใหญ่
       include: {
         author: {
           select: {
@@ -165,12 +166,12 @@ export class PostsService {
   async update(
     id: number,
     updatePostDto: UpdatePostDto,
-    currentUser?: { id: number; role: Role },
+    currentUser: { id: number; role: Role },
   ) {
     const post = await this.findOne(id);
 
     // ตรวจสอบสิทธิ์ความเป็นเจ้าของบทความ (Ownership check)
-    if (currentUser && currentUser.role !== Role.ADMIN && post.authorId !== currentUser.id) {
+    if (currentUser.role !== Role.ADMIN && post.authorId !== currentUser.id) {
       throw new ForbiddenException('You can only update your own posts');
     }
 
@@ -215,11 +216,11 @@ export class PostsService {
    * - ADMIN ลบบทความใดก็ได้
    * - AUTHOR ลบได้เฉพาะบทความของตนเอง
    */
-  async remove(id: number, currentUser?: { id: number; role: Role }) {
+  async remove(id: number, currentUser: { id: number; role: Role }) {
     const post = await this.findOne(id);
 
     // ตรวจสอบสิทธิ์ความเป็นเจ้าของบทความ
-    if (currentUser && currentUser.role !== Role.ADMIN && post.authorId !== currentUser.id) {
+    if (currentUser.role !== Role.ADMIN && post.authorId !== currentUser.id) {
       throw new ForbiddenException('You can only delete your own posts');
     }
 
@@ -274,7 +275,7 @@ export class PostsService {
 
     // 2. ตรวจสอบ Cache Hit
     const cachedData = await this.redisService.get<{
-      data: any[];
+      data: Record<string, unknown>[];
       meta: {
         total: number;
         page: number;
@@ -290,7 +291,7 @@ export class PostsService {
     }
 
     // 3. Cache Miss: สร้าง Where Clause แบบ Dynamic กรองเฉพาะโพสต์ที่ยังไม่ถูกลบ (deletedAt: null)
-    const where: any = { deletedAt: null };
+    const where: Prisma.PostWhereInput = { deletedAt: null };
 
     // ค้นหาข้อความใน Title หรือ Content (Case-Insensitive)
     if (query.search) {

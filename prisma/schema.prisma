@@ -111,6 +111,9 @@ model Post {
   deletedAt   DateTime?
 
   @@index([deletedAt])
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([isPublished, deletedAt, createdAt])
   @@map("posts")
 }
 

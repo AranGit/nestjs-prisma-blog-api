@@ -1,21 +1,11 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, MinLength } from 'class-validator';
+import { PartialType } from '@nestjs/swagger';
+import { CreateCategoryDto } from './create-category.dto.js';
 
 /**
  * ==============================================================================
  * UpdateCategoryDto (Data Transfer Object สำหรับแก้ไขชื่อหมวดหมู่)
  * ==============================================================================
- * ทุกฟิลด์เป็น Optional สำหรับการอัปเดตข้อมูลแบบเฉพาะเจาะจง (PATCH)
- *
- * Backend Concept:
- * - หากระบุ name เข้ามา จะต้องมีความยาวไม่น้อยกว่า 2 ตัวอักษร
- * - หากไม่ระบุ name เข้ามา จะถือว่าไม่ต้องการแก้ไขฟิลด์นี้
+ * สืบทอดฟิลด์และการ validate ทั้งหมดจาก CreateCategoryDto โดยเปลี่ยนทุกฟิลด์เป็น Optional
  * ==============================================================================
  */
-export class UpdateCategoryDto {
-  @ApiPropertyOptional({ example: 'Science', description: 'Updated category name (minimum 2 characters)', minLength: 2 })
-  @IsString()
-  @IsOptional()
-  @MinLength(2)
-  name?: string;
-}
+export class UpdateCategoryDto extends PartialType(CreateCategoryDto) {}

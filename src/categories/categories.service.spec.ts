@@ -57,6 +57,7 @@ describe('CategoriesService', () => {
         name: 'Technology',
         createdAt: new Date(),
         updatedAt: new Date(),
+        deletedAt: null,
       };
       prismaMock.category.create.mockResolvedValue(mockCreatedCategory);
 
@@ -77,6 +78,7 @@ describe('CategoriesService', () => {
         name: 'Technology',
         createdAt: new Date(),
         updatedAt: new Date(),
+        deletedAt: null,
       });
 
       // [Act & Assert] เมื่อชื่อซ้ำ ต้อง throw ConflictException
@@ -141,9 +143,10 @@ describe('CategoriesService', () => {
         name: 'Technology',
         createdAt: new Date(),
         updatedAt: new Date(),
+        deletedAt: null,
         posts: [],
       };
-      prismaMock.category.findFirst.mockResolvedValue(mockCategory);
+      prismaMock.category.findFirst.mockResolvedValue(mockCategory as any);
 
       const result = await service.findOne(1);
 
@@ -169,14 +172,16 @@ describe('CategoriesService', () => {
         name: 'Old',
         createdAt: new Date(),
         updatedAt: new Date(),
+        deletedAt: null,
         posts: [],
-      });
+      } as any);
       // 2. มีหมวดหมู่อื่น (id: 2) ที่ใช้ชื่อ 'DuplicateName' อยู่แล้ว
       prismaMock.category.findUnique.mockResolvedValueOnce({
         id: 2,
         name: 'DuplicateName',
         createdAt: new Date(),
         updatedAt: new Date(),
+        deletedAt: null,
       });
 
       await expect(
@@ -195,8 +200,9 @@ describe('CategoriesService', () => {
         name: 'Technology',
         createdAt: new Date(),
         updatedAt: new Date(),
+        deletedAt: null,
         posts: [],
-      });
+      } as any);
       // ไม่มี Active Post ผูกอยู่
       prismaMock.post.count.mockResolvedValue(0);
       prismaMock.category.update.mockResolvedValue({
@@ -222,8 +228,9 @@ describe('CategoriesService', () => {
         name: 'Technology',
         createdAt: new Date(),
         updatedAt: new Date(),
+        deletedAt: null,
         posts: [],
-      });
+      } as any);
       // มี Active Post ผูกอยู่ 2 บทความ
       prismaMock.post.count.mockResolvedValue(2);
 

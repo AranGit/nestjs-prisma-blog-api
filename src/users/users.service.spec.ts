@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { mockDeep, DeepMockProxy } from 'vitest-mock-extended';
 import { PrismaClient, Role } from '@prisma/client';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { UsersService } from './users.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
@@ -71,6 +71,8 @@ describe('UsersService', () => {
         email: 'john@example.com',
         password: 'hashedPassword',
         name: 'John Doe',
+        role: Role.AUTHOR,
+        deletedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -135,6 +137,7 @@ describe('UsersService', () => {
       expect(result[0].email).toBe('user1@example.com');
       expect(prismaMock.user.findMany).toHaveBeenCalledWith({
         where: { deletedAt: null },
+        take: 100,
         select: {
           id: true,
           email: true,
@@ -205,9 +208,23 @@ describe('UsersService', () => {
       };
       prismaMock.user.update.mockResolvedValue(updatedUser as any);
 
-      const result = await service.update(1, { name: 'John Updated' });
+      const result = await service.update(
+        1,
+        { name: 'John Updated' },
+        { id: 1, role: Role.AUTHOR },
+      );
 
       expect(result.name).toBe('John Updated');
+    });
+
+    it('ควรโยน ForbiddenException เมื่อผู้ใช้พยายามแก้ไขโปรไฟล์ของคนอื่น', async () => {
+      await expect(
+        service.update(
+          2,
+          { name: 'Hacked Name' },
+          { id: 1, role: Role.AUTHOR },
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

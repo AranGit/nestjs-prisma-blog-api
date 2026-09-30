@@ -80,7 +80,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
    * @param value ข้อมูลที่ต้องการแคช (จะถูกแปลงเป็น JSON string)
    * @param ttlSeconds เวลาหมดอายุของแคช (วินาที)
    */
-  async set(key: string, value: any, ttlSeconds?: number): Promise<void> {
+  async set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
     try {
       const serialized = JSON.stringify(value);
       if (ttlSeconds && ttlSeconds > 0) {

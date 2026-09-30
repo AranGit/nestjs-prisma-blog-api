@@ -17,6 +17,7 @@ import { UpdateUserDto } from './dto/update-user.dto.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import { Roles } from '../auth/decorators/roles.decorator.js';
+import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 
 /**
  * ==============================================================================
@@ -26,8 +27,9 @@ import { Roles } from '../auth/decorators/roles.decorator.js';
  *
  * RBAC Authorization Rules:
  * - `POST /users`: เฉพาะ ADMIN (Admin User Provisioning) ส่วนคนทั่วไปใช้ `/auth/register`
- * - `GET /users`, `GET /users/:id`: ดูข้อมูลผู้ใช้
- * - `PATCH /users/:id`: แก้ไขข้อมูลผู้ใช้
+ * - `GET /users`: เฉพาะ ADMIN เท่านั้น เพื่อป้องกันการกวาดข้อมูลผู้ใช้ (Scraping)
+ * - `GET /users/:id`: ต้อง Login ถึงจะดูข้อมูลได้
+ * - `PATCH /users/:id`: ต้อง Login และแก้ได้เฉพาะบัญชีตัวเอง ยกเว้น ADMIN แก้ได้ทุกคน
  * - `DELETE /users/:id`: เฉพาะ ADMIN เท่านั้น
  * ==============================================================================
  */
@@ -61,23 +63,31 @@ export class UsersController {
 
   /**
    * [GET] /api/v1/users
-   * ดึงรายการผู้ใช้ทั้งหมดในระบบ
+   * ดึงรายการผู้ใช้ทั้งหมดในระบบ (เฉพาะ ADMIN เท่านั้น)
    */
   @Get()
-  @ApiOperation({ summary: 'Get all users', description: 'Retrieves all registered users.' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all users (Admin only)', description: 'Retrieves all registered users. Requires ADMIN role.' })
   @ApiResponse({ status: 200, description: 'List of all users.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Missing or invalid token.' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Requires ADMIN role.' })
   findAll() {
     return this.usersService.findAll();
   }
 
   /**
    * [GET] /api/v1/users/:id
-   * ดึงข้อมูลผู้ใช้รายบุคคลด้วย ID พร้อมบทความที่เคยเขียน
+   * ดึงข้อมูลผู้ใช้รายบุคคลด้วย ID พร้อมบทความที่เคยเขียน (ต้อง Login)
    */
   @Get(':id')
-  @ApiOperation({ summary: 'Get a user by ID', description: 'Retrieves a single user along with their authored posts.' })
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get a user by ID (Authenticated)', description: 'Retrieves a single user along with their authored posts.' })
   @ApiParam({ name: 'id', type: Number, description: 'Unique user identifier' })
   @ApiResponse({ status: 200, description: 'User found.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Missing or invalid token.' })
   @ApiResponse({ status: 404, description: 'User with given ID not found.' })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.findOne(id);
@@ -85,15 +95,23 @@ export class UsersController {
 
   /**
    * [PATCH] /api/v1/users/:id
-   * แก้ไขข้อมูลผู้ใช้บางส่วน
+   * แก้ไขข้อมูลผู้ใช้บางส่วน (ผู้ใช้แก้ได้เฉพาะบัญชีตัวเอง หรือเป็น ADMIN)
    */
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a user', description: 'Partially updates existing user information.' })
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a user (Self or Admin)', description: 'Partially updates existing user information. Users can only update their own profile unless ADMIN.' })
   @ApiParam({ name: 'id', type: Number, description: 'User ID to update' })
   @ApiResponse({ status: 200, description: 'User successfully updated.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Missing or invalid token.' })
+  @ApiResponse({ status: 403, description: 'Forbidden - You can only update your own profile.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateUserDto: UpdateUserDto,
+    @CurrentUser() currentUser: { id: number; role: Role },
+  ) {
+    return this.usersService.update(id, updateUserDto, currentUser);
   }
 
   /**

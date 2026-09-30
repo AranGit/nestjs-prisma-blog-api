@@ -3,6 +3,7 @@ import {
   Catch,
   ArgumentsHost,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
@@ -16,24 +17,42 @@ import { Request, Response } from 'express';
  * Backend Concept:
  * 1. `@Catch()` (ไม่มีพารามิเตอร์): ดักจับทุก Exception ที่หลุดรอดมาในระบบ
  * 2. Security & Information Hiding:
- *    - ใน Production เราไม่ควรส่ง Raw Error Stacktrace ให้ผู้ใช้เห็น เพราะอาจรั่วไหลข้อมูลสำคัญ (Database credentials, file paths)
+ *    - ใน Production เราไม่ควรส่ง Raw Error Stacktrace หรือ Database Exception Message ให้ผู้ใช้เห็น
+ *      เพราะอาจรั่วไหลข้อมูลสำคัญ (Database credentials, schema, file paths)
  *    - ควรตอบกลับเป็น Status 500 Internal Server Error พร้อมข้อความที่ปลอดภัย
- * 3. Logging: บันทึก error ลงใน console หรือ centralized logging system (เช่น Winston, Datadog) เพื่อให้ทีม Dev เข้ามา Debug
+ * 3. Logging: บันทึก error ลงใน Logger ของ NestJS สำหรับการ debug
  * ==============================================================================
  */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
+  private readonly logger = new Logger(AllExceptionsFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
+    // ป้องกันกรณี headers ถูกส่งไปแล้ว
+    if (response.headersSent) {
+      return;
+    }
+
     // กำหนด status เป็น 500 สำหรับ unhandled exceptions
     const status = HttpStatus.INTERNAL_SERVER_ERROR;
-    const message = exception instanceof Error ? exception.message : 'Internal server error';
 
     // บันทึก Log ฝั่ง Server สำหรับการตรวจสอบและแก้ไขปัญหา
-    console.error('[Unhandled Exception]:', exception);
+    this.logger.error(
+      `Unhandled exception on ${request.method} ${request.url}`,
+      exception instanceof Error ? exception.stack : String(exception),
+    );
+
+    // ป้องกันการรั่วไหลของ Internal Error Details ใน Production
+    const isProduction = process.env.NODE_ENV === 'production';
+    const message = isProduction
+      ? 'Internal server error'
+      : exception instanceof Error
+        ? exception.message
+        : 'Internal server error';
 
     // ส่งโครงสร้าง error แบบมาตรฐานเดียวกันกลับไปหา Client
     response.status(status).json({

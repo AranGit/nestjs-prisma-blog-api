@@ -3,7 +3,7 @@ import {
   Catch,
   ArgumentsHost,
   HttpException,
-  HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
@@ -30,14 +30,26 @@ import { Request, Response } from 'express';
  */
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(HttpExceptionFilter.name);
+
   catch(exception: HttpException, host: ArgumentsHost) {
     // 1. ดึง HTTP Context จาก ArgumentsHost
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
+    // ป้องกันกรณี headers ถูกส่งไปแล้ว
+    if (response.headersSent) {
+      return;
+    }
+
     // 2. ดึง HTTP Status Code จาก Exception (เช่น 400, 401, 403, 404)
     const status = exception.getStatus();
+
+    // Log ข้อผิดพลาดระดับ 5xx
+    if (status >= 500) {
+      this.logger.error(`${request.method} ${request.url} - ${status}`, exception.stack);
+    }
 
     // 3. ดึงเนื้อหา error response ดั้งเดิมที่ส่งมาจาก throw new HttpException(...) หรือ ValidationPipe
     const exceptionResponse = exception.getResponse();
@@ -47,8 +59,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (typeof exceptionResponse === 'string') {
       message = exceptionResponse;
     } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-      // ดึง property .message ถ้ามี หากไม่มีให้ใช้ exception.message พื้นฐาน
-      message = (exceptionResponse as any).message || exception.message;
+      const resObj = exceptionResponse as Record<string, unknown>;
+      message = (resObj.message as string | string[]) || exception.message;
     } else {
       message = exception.message;
     }

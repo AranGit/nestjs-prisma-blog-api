@@ -1,6 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
-import { Role } from '@prisma/client';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
 
 /**
  * ==============================================================================
@@ -9,30 +8,27 @@ import { Role } from '@prisma/client';
  * กำหนดข้อมูลที่ผู้ใช้ต้องส่งเมื่อสมัครสมาชิกใหม่
  *
  * Backend Concept:
- * - รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร
- * - รองรับการเลือก Role ได้ (เช่น สำหรับ Admin สร้าง User หรือทดสอบ)
- *   โดยค่าเริ่มต้นถ้าไม่ส่งมาจะถูกกำหนดเป็น AUTHOR
+ * - รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร และไม่เกิน 72 ตัวอักษร (ข้อจำกัด bcrypt)
+ * - การลงทะเบียนสาธารณะจะได้รับสิทธิ์เป็น AUTHOR โดยอัตโนมัติเสมอ
  * ==============================================================================
  */
 export class RegisterDto {
-  @ApiProperty({ example: 'John Doe', description: 'User full name' })
+  @ApiProperty({ example: 'John Doe', description: 'User full name', maxLength: 100 })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(100)
   name: string;
 
-  @ApiProperty({ example: 'john@example.com', description: 'User valid email address' })
+  @ApiProperty({ example: 'john@example.com', description: 'User valid email address', maxLength: 255 })
   @IsEmail()
   @IsNotEmpty()
+  @MaxLength(255)
   email: string;
 
-  @ApiProperty({ example: 'password123', description: 'Password (minimum 6 characters)', minLength: 6 })
+  @ApiProperty({ example: 'password123', description: 'Password (minimum 6 characters, max 72 characters)', minLength: 6, maxLength: 72 })
   @IsString()
   @IsNotEmpty()
   @MinLength(6)
+  @MaxLength(72)
   password: string;
-
-  @ApiPropertyOptional({ enum: Role, default: Role.AUTHOR, description: 'User role (ADMIN or AUTHOR)' })
-  @IsOptional()
-  @IsEnum(Role)
-  role?: Role;
 }

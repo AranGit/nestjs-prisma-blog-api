@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import bcrypt from 'bcrypt';
+import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
@@ -70,6 +71,7 @@ export class UsersService {
   async findAll() {
     return this.prisma.user.findMany({
       where: { deletedAt: null },
+      take: 100, // Safety limit: ป้องกัน memory exhaustion
       select: {
         id: true,
         email: true,
@@ -118,12 +120,32 @@ export class UsersService {
   /**
    * แก้ไขข้อมูลผู้ใช้ (Update User)
    * ตรวจสอบว่าผู้ใช้มีตัวตนอยู่จริงและยังไม่ถูกลบก่อนทำการอัปเดต
+   * พร้อมทั้งตรวจสอบสิทธิ์ความเป็นเจ้าของบัญชี (Ownership Check)
    */
-  async update(id: number, updateUserDto: UpdateUserDto) {
-    // ตรวจสอบก่อนว่า User ID นี้มีอยู่จริงไหม (ถ้าไม่มีจะ throw NotFoundException 404 ทันที)
+  async update(
+    id: number,
+    updateUserDto: UpdateUserDto,
+    currentUser: { id: number; role: Role },
+  ) {
+    // 1. ตรวจสอบสิทธิ์: ผู้ใช้แก้ไขได้เฉพาะโปรไฟล์ของตนเอง เว้นแต่เป็น ADMIN
+    if (currentUser.role !== Role.ADMIN && currentUser.id !== id) {
+      throw new ForbiddenException('You can only update your own profile');
+    }
+
+    // 2. ตรวจสอบก่อนว่า User ID นี้มีอยู่จริงไหม
     await this.findOne(id);
 
-    const dataToUpdate: any = { ...updateUserDto };
+    // 3. หากมีการขอเปลี่ยน email ให้เช็คว่าซ้ำกับผู้อื่นหรือไม่
+    if (updateUserDto.email) {
+      const emailConflict = await this.prisma.user.findFirst({
+        where: { email: updateUserDto.email, id: { not: id } },
+      });
+      if (emailConflict) {
+        throw new ConflictException('User with this email already exists');
+      }
+    }
+
+    const dataToUpdate: Record<string, unknown> = { ...updateUserDto };
     if (updateUserDto.password) {
       dataToUpdate.password = await bcrypt.hash(updateUserDto.password, this.SALT_ROUNDS);
     }

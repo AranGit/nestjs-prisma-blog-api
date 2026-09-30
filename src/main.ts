@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import { AppModule } from './app.module.js';
@@ -111,13 +111,17 @@ async function bootstrap() {
     }),
   );
 
-  // 9. เริ่มต้นรับฟัง HTTP Request บน Port ที่กำหนด (Default คือ 3000)
+  // 9. เปิดใช้งาน Graceful Shutdown Hooks สำหรับ PrismaService และ RedisService
+  app.enableShutdownHooks();
+
+  // 10. เริ่มต้นรับฟัง HTTP Request บน Port ที่กำหนด (Default คือ 3000)
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
 
-  console.log(`[SERVER] Application is running on: http://localhost:${port}/api`);
-  console.log(`[SWAGGER] Swagger documentation: http://localhost:${port}/api/docs`);
-  console.log(`[SCALAR] Scalar API reference: http://localhost:${port}/api/reference`);
+  const logger = new Logger('Bootstrap');
+  logger.log(`Application is running on: http://localhost:${port}/api`);
+  logger.log(`Swagger documentation: http://localhost:${port}/api/docs`);
+  logger.log(`Scalar API reference: http://localhost:${port}/api/reference`);
 }
 
 // เริ่มต้นรันฟังก์ชัน bootstrap

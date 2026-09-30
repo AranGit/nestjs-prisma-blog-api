@@ -39,7 +39,7 @@ export class AuthService {
    * สมัครสมาชิกใหม่ (Register)
    */
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
-    const { email, password, name, role } = registerDto;
+    const { email, password, name } = registerDto;
 
     // 1. ตรวจสอบว่ามีอีเมลนี้ในระบบแล้วหรือไม่
     const existingUser = await this.prisma.user.findUnique({
@@ -53,13 +53,13 @@ export class AuthService {
     // 2. แฮชรหัสผ่านด้วย bcrypt ก่อนบันทึก
     const hashedPassword = await bcrypt.hash(password, this.SALT_ROUNDS);
 
-    // 3. บันทึก User ลงฐานข้อมูล
+    // 3. บันทึก User ลงฐานข้อมูล (กำหนดบทบาทเป็น AUTHOR เสมอเพื่อความปลอดภัย)
     const user = await this.prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
-        role: role || Role.AUTHOR,
+        role: Role.AUTHOR,
       },
       select: {
         id: true,

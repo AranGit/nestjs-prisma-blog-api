@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength, IsEnum, IsOptional } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MaxLength, MinLength, IsEnum, IsOptional } from 'class-validator';
 import { Role } from '@prisma/client';
 
 /**
@@ -18,22 +18,25 @@ export class CreateUserDto {
   // @ApiProperty: แสดงคำอธิบายและตัวอย่างใน Swagger
   // @IsEmail: ตรวจสอบรูปแบบ Email (เช่น ต้องมี @ และ domain)
   // @IsNotEmpty: ห้ามส่งค่าว่างหรือ string ว่าง ("")
-  @ApiProperty({ example: 'john@example.com', description: 'User email address (must be valid email format)' })
+  @ApiProperty({ example: 'john@example.com', description: 'User email address (must be valid email format)', maxLength: 255 })
   @IsEmail()
   @IsNotEmpty()
+  @MaxLength(255)
   email: string;
 
-  // @MinLength(6): บังคับความยาวรหัสผ่านอย่างน้อย 6 ตัวอักษรเพื่อความปลอดภัยขั้นพื้นฐาน
-  @ApiProperty({ example: 'strongPassword123', description: 'User password (minimum 6 characters)', minLength: 6 })
+  // @MinLength(6): บังคับความยาวรหัสผ่านอย่างน้อย 6 ตัวอักษร, @MaxLength(72): ข้อจำกัดของ bcrypt
+  @ApiProperty({ example: 'strongPassword123', description: 'User password (6-72 characters)', minLength: 6, maxLength: 72 })
   @IsString()
   @IsNotEmpty()
   @MinLength(6)
+  @MaxLength(72)
   password: string;
 
   // @IsString: ตรวจสอบว่าเป็นชนิดตัวอักษร (String)
-  @ApiProperty({ example: 'John Doe', description: 'User display name' })
+  @ApiProperty({ example: 'John Doe', description: 'User display name', maxLength: 100 })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(100)
   name: string;
 
   // @IsEnum: อนุญาตให้ระบุ Role (ADMIN หรือ AUTHOR) หากไม่ระบุจะเป็น AUTHOR ตาม Default ใน Schema
