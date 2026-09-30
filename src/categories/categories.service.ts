@@ -66,7 +66,7 @@ export class CategoriesService {
   /**
    * ดึงข้อมูลหมวดหมู่รายอัน พร้อมรายการบทความที่สังกัดในหมวดหมู่นี้ (เฉพาะที่ยังไม่ถูกลบ)
    */
-  async findOne(id: number) {
+  async findOne(id: string) {
     const category = await this.prisma.category.findFirst({
       where: { id, deletedAt: null },
       include: {
@@ -92,7 +92,7 @@ export class CategoriesService {
   /**
    * แก้ไขชื่อหมวดหมู่
    */
-  async update(id: number, updateCategoryDto: UpdateCategoryDto) {
+  async update(id: string, updateCategoryDto: UpdateCategoryDto) {
     // 1. ตรวจสอบว่าหมวดหมู่เดิมมีอยู่จริงไหม
     await this.findOne(id);
 
@@ -117,7 +117,7 @@ export class CategoriesService {
    * ลบหมวดหมู่ (Soft Delete)
    * Soft Restrict: หากหมวดหมู่นี้ยังมีบทความที่ Active อยู่ จะไม่อนุญาตให้ลบ
    */
-  async remove(id: number) {
+  async remove(id: string) {
     await this.findOne(id);
 
     const activePostsCount = await this.prisma.post.count({

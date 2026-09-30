@@ -2,7 +2,7 @@ import {
   Controller,
   Get,
   Param,
-  ParseIntPipe,
+  ParseUUIDPipe,
   Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
@@ -21,8 +21,8 @@ import { QueryPostV2Dto } from './dto/query-post-v2.dto.js';
  * สังเกตว่า `@Get('stats')` ต้องประกาศ "ก่อน" `@Get(':id')` เสมอ!
  * เหตุผล:
  * - ถ้าประกาศ `@Get(':id')` ก่อน เมื่อมีคำขอมาที่ `/posts/stats` Express/NestJS จะมองว่า
- *   คำว่า "stats" คือค่าพารามิเตอร์ `:id` และพยายามแปลงเป็นตัวเลขด้วย `ParseIntPipe`
- * - ผลลัพธ์คือเกิด Error 400 "Validation failed (numeric string is expected)" ทันที!
+ *   คำว่า "stats" คือค่าพารามิเตอร์ `:id` และพยายามแปลงเป็น UUID ด้วย `ParseUUIDPipe`
+ * - ผลลัพธ์คือเกิด Error 400 "Validation failed (uuid is expected)" ทันที!
  * - ดังนั้น Static route (`stats`, `published`) ต้องอยู่ก่อน Dynamic parameter route (`:id`) เสมอ
  * ==============================================================================
  */
@@ -34,7 +34,7 @@ export class PostsV2Controller {
   /**
    * [GET] /api/v2/posts
    * ดึงบทความแบบแบ่งหน้า (Pagination) และค้นหาตาม Keyword หรือ Category
-   * รองรับ Query Parameters: ?page=1&limit=10&search=NestJS&categoryId=1
+   * รองรับ Query Parameters: ?page=1&limit=10&search=NestJS&categoryId=019245bb-8e34-7389-9a74-9f8263590002
    */
   @Get()
   @ApiOperation({
@@ -72,10 +72,10 @@ export class PostsV2Controller {
     summary: 'Get a post with reading time & related posts (v2)',
     description: 'Returns post details enriched with estimated reading time and related posts from the same category.',
   })
-  @ApiParam({ name: 'id', type: Number, description: 'Post ID' })
+  @ApiParam({ name: 'id', type: String, description: 'Post UUID' })
   @ApiResponse({ status: 200, description: 'Post found with reading time and related posts.' })
   @ApiResponse({ status: 404, description: 'Post not found.' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.postsService.findOneV2(id);
   }
 }

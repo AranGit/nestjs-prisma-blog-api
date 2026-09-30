@@ -67,7 +67,7 @@ describe('UsersService', () => {
 
     it('ควรโยน ConflictException (409) เมื่ออีเมลซ้ำ', async () => {
       prismaMock.user.findUnique.mockResolvedValue({
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         email: 'john@example.com',
         password: 'hashedPassword',
         name: 'John Doe',
@@ -92,7 +92,7 @@ describe('UsersService', () => {
       prismaMock.user.findUnique.mockResolvedValue(null);
 
       const mockAdminUser = {
-        id: 2,
+        id: '019245bb-8e34-7389-9a74-9f8263590002',
         email: 'admin@example.com',
         name: 'Admin User',
         role: Role.ADMIN,
@@ -126,8 +126,8 @@ describe('UsersService', () => {
   describe('findAll', () => {
     it('ควรคืนค่าผู้ใช้ทั้งหมดเฉพาะที่ยังไม่ถูก Soft Delete', async () => {
       const mockUsers = [
-        { id: 1, email: 'user1@example.com', name: 'User 1', createdAt: new Date(), updatedAt: new Date() },
-        { id: 2, email: 'user2@example.com', name: 'User 2', createdAt: new Date(), updatedAt: new Date() },
+        { id: '019245bb-8e34-7389-9a74-9f8263590001', email: 'user1@example.com', name: 'User 1', createdAt: new Date(), updatedAt: new Date() },
+        { id: '019245bb-8e34-7389-9a74-9f8263590002', email: 'user2@example.com', name: 'User 2', createdAt: new Date(), updatedAt: new Date() },
       ];
       prismaMock.user.findMany.mockResolvedValue(mockUsers as any);
 
@@ -156,21 +156,21 @@ describe('UsersService', () => {
   describe('findOne', () => {
     it('ควรคืนค่าผู้ใช้พร้อมรายการบทความที่เขียน', async () => {
       const mockUserWithPosts = {
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         email: 'john@example.com',
         name: 'John Doe',
         createdAt: new Date(),
         updatedAt: new Date(),
-        posts: [{ id: 101, title: 'My First Post', isPublished: true, createdAt: new Date() }],
+        posts: [{ id: '019245bb-8e34-7389-9a74-9f8263590101', title: 'My First Post', isPublished: true, createdAt: new Date() }],
       };
       prismaMock.user.findFirst.mockResolvedValue(mockUserWithPosts as any);
 
-      const result = await service.findOne(1);
+      const result = await service.findOne('019245bb-8e34-7389-9a74-9f8263590001');
 
       expect(result).toEqual(mockUserWithPosts);
       expect(result.posts).toHaveLength(1);
       expect(prismaMock.user.findFirst).toHaveBeenCalledWith({
-        where: { id: 1, deletedAt: null },
+        where: { id: '019245bb-8e34-7389-9a74-9f8263590001', deletedAt: null },
         select: expect.objectContaining({
           id: true,
           email: true,
@@ -181,7 +181,7 @@ describe('UsersService', () => {
     it('ควรโยน NotFoundException เมื่อไม่พบ User ID หรือถูกลบไปแล้ว', async () => {
       prismaMock.user.findFirst.mockResolvedValue(null);
 
-      await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('019245bb-8e34-7389-9a74-9f8263590999')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -191,7 +191,7 @@ describe('UsersService', () => {
   describe('update', () => {
     it('ควรอัปเดตข้อมูลผู้ใช้สำเร็จ', async () => {
       prismaMock.user.findFirst.mockResolvedValue({
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         email: 'john@example.com',
         name: 'John Doe',
         createdAt: new Date(),
@@ -200,7 +200,7 @@ describe('UsersService', () => {
       } as any);
 
       const updatedUser = {
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         email: 'john.new@example.com',
         name: 'John Updated',
         createdAt: new Date(),
@@ -209,9 +209,9 @@ describe('UsersService', () => {
       prismaMock.user.update.mockResolvedValue(updatedUser as any);
 
       const result = await service.update(
-        1,
+        '019245bb-8e34-7389-9a74-9f8263590001',
         { name: 'John Updated' },
-        { id: 1, role: Role.AUTHOR },
+        { id: '019245bb-8e34-7389-9a74-9f8263590001', role: Role.AUTHOR },
       );
 
       expect(result.name).toBe('John Updated');
@@ -220,9 +220,9 @@ describe('UsersService', () => {
     it('ควรโยน ForbiddenException เมื่อผู้ใช้พยายามแก้ไขโปรไฟล์ของคนอื่น', async () => {
       await expect(
         service.update(
-          2,
+          '019245bb-8e34-7389-9a74-9f8263590002',
           { name: 'Hacked Name' },
-          { id: 1, role: Role.AUTHOR },
+          { id: '019245bb-8e34-7389-9a74-9f8263590001', role: Role.AUTHOR },
         ),
       ).rejects.toThrow(ForbiddenException);
     });
@@ -231,7 +231,7 @@ describe('UsersService', () => {
   describe('remove', () => {
     it('ควรทำ Soft Cascade ลบทั้งผู้ใช้และบทความของผู้ใช้ผ่าน Transaction สำเร็จ', async () => {
       prismaMock.user.findFirst.mockResolvedValue({
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         email: 'john@example.com',
         name: 'John Doe',
         createdAt: new Date(),
@@ -240,15 +240,15 @@ describe('UsersService', () => {
       } as any);
 
       const mockDeletedUser = {
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         email: 'john@example.com',
         name: 'John Doe',
       };
       prismaMock.$transaction.mockResolvedValue([mockDeletedUser, { count: 3 }] as any);
 
-      const result = await service.remove(1);
+      const result = await service.remove('019245bb-8e34-7389-9a74-9f8263590001');
 
-      expect(result.id).toBe(1);
+      expect(result.id).toBe('019245bb-8e34-7389-9a74-9f8263590001');
       expect(prismaMock.$transaction).toHaveBeenCalledOnce();
     });
   });

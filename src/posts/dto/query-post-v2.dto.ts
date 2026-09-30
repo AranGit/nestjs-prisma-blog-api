@@ -1,13 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
 
 /**
  * ==============================================================================
  * QueryPostV2Dto (DTO สำหรับ Query Parameters ใน API v2)
  * ==============================================================================
  * ใช้สำหรับรับพารามิเตอร์การค้นหาและแบ่งหน้า (Pagination, Search & Filtering)
- * ตัวอย่าง URL: `/api/v2/posts?page=2&limit=10&search=NestJS&categoryId=1`
+ * ตัวอย่าง URL: `/api/v2/posts?page=2&limit=10&search=NestJS&categoryId=019245bb-8e34-7389-9a74-9f8263590002`
  *
  * Backend Concept:
  * 1. Pagination Protection:
@@ -41,10 +41,8 @@ export class QueryPostV2Dto {
   @MaxLength(200)
   search?: string;
 
-  @ApiPropertyOptional({ example: 1, description: 'Filter posts by specific Category ID (minimum: 1)', minimum: 1 })
+  @ApiPropertyOptional({ example: '019245bb-8e34-7389-9a74-9f8263590002', description: 'Filter posts by specific Category ID (UUID v7)' })
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  categoryId?: number;
+  @IsUUID()
+  categoryId?: string;
 }

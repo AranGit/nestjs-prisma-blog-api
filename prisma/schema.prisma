@@ -26,8 +26,8 @@ datasource db {
 // Stores user account data who can author blog posts.
 model User {
   // @id: Primary Key ประจำตาราง (รหัสประจำตัวที่ไม่ซ้ำกัน)
-  // @default(autoincrement()): กำหนดให้ฐานข้อมูลสร้างเลข 1, 2, 3... ให้อัตโนมัติ
-  id        Int      @id @default(autoincrement())
+  // @default(uuid(7)): กำหนดให้สร้าง UUID v7 (Time-sortable UUID) อัตโนมัติ
+  id        String   @id @default(uuid(7))
 
   // @unique: ห้ามซ้ำในระดับ Database (Unique Constraint)
   email     String   @unique
@@ -75,7 +75,7 @@ enum Role {
 // เก็บบทความในบล็อก พร้อมความสัมพันธ์กับ User (Author) และ Category
 // Stores blog post content and links to its author and category.
 model Post {
-  id          Int      @id @default(autoincrement())
+  id          String   @id @default(uuid(7))
   title       String
   content     String
 
@@ -89,7 +89,7 @@ model Post {
   // Foreign Key & Relationship 1: User (Author)
   // ---------------------------------------------------------------------------
   // authorId: Foreign Key ชี้ไปยัง User.id
-  authorId   Int
+  authorId   String
 
   // @relation: กำหนดเงื่อนไขความสัมพันธ์
   // - fields: [authorId] คือ Foreign Key ในตารางนี้
@@ -101,7 +101,7 @@ model Post {
   // Foreign Key & Relationship 2: Category
   // ---------------------------------------------------------------------------
   // categoryId: Foreign Key ชี้ไปยัง Category.id
-  categoryId Int
+  categoryId String
 
   // - onDelete: Restrict หมายถึง ไม่อนุญาตให้ลบ Category หากยังมี Post ผูกอยู่กับ Category นั้น
   // ป้องกันไม่ให้เกิดบทความที่ไม่มีหมวดหมู่ (Orphaned posts)
@@ -123,7 +123,7 @@ model Post {
 // จัดกลุ่มประเภทของบทความ เช่น Tech, Lifestyle, Tutorial
 // Organizes blog posts into distinct categories.
 model Category {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(uuid(7))
 
   // ชื่อหมวดหมู่ต้องไม่ซ้ำกัน
   name      String   @unique

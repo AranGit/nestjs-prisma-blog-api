@@ -67,21 +67,21 @@ describe('PostsService', () => {
   describe('create (v1)', () => {
     it('ควรสร้างบทความสำเร็จเมื่อ Author และ Category มีอยู่จริง', async () => {
       // 1. Author มีอยู่จริงและยังไม่ถูกลบ
-      prismaMock.user.findFirst.mockResolvedValue({ id: 1 } as any);
+      prismaMock.user.findFirst.mockResolvedValue({ id: '019245bb-8e34-7389-9a74-9f8263590001' } as any);
       // 2. Category มีอยู่จริงและยังไม่ถูกลบ
-      prismaMock.category.findFirst.mockResolvedValue({ id: 2 } as any);
+      prismaMock.category.findFirst.mockResolvedValue({ id: '019245bb-8e34-7389-9a74-9f8263590002' } as any);
 
       const mockCreatedPost = {
-        id: 10,
+        id: '019245bb-8e34-7389-9a74-9f8263590010',
         title: 'Mastering NestJS',
         content: 'Content here...',
         isPublished: true,
-        authorId: 1,
-        categoryId: 2,
+        authorId: '019245bb-8e34-7389-9a74-9f8263590001',
+        categoryId: '019245bb-8e34-7389-9a74-9f8263590002',
         createdAt: new Date(),
         updatedAt: new Date(),
-        author: { id: 1, name: 'John Doe', email: 'john@example.com' },
-        category: { id: 2, name: 'Tech' },
+        author: { id: '019245bb-8e34-7389-9a74-9f8263590001', name: 'John Doe', email: 'john@example.com' },
+        category: { id: '019245bb-8e34-7389-9a74-9f8263590002', name: 'Tech' },
       };
       prismaMock.post.create.mockResolvedValue(mockCreatedPost as any);
 
@@ -90,12 +90,12 @@ describe('PostsService', () => {
           title: 'Mastering NestJS',
           content: 'Content here...',
           isPublished: true,
-          categoryId: 2,
+          categoryId: '019245bb-8e34-7389-9a74-9f8263590002',
         },
-        1, // authorId
+        '019245bb-8e34-7389-9a74-9f8263590001', // authorId
       );
 
-      expect(result.id).toBe(10);
+      expect(result.id).toBe('019245bb-8e34-7389-9a74-9f8263590010');
       expect(result.author.name).toBe('John Doe');
       expect(prismaMock.post.create).toHaveBeenCalledOnce();
       expect(redisServiceMock.delByPattern).toHaveBeenCalledWith('posts:v2:*');
@@ -109,16 +109,16 @@ describe('PostsService', () => {
           {
             title: 'Post',
             content: 'Content',
-            categoryId: 1,
+            categoryId: '019245bb-8e34-7389-9a74-9f8263590001',
           },
-          999, // invalid authorId
+          '019245bb-8e34-7389-9a74-9f8263590999', // invalid authorId
         ),
       ).rejects.toThrow(NotFoundException);
       expect(redisServiceMock.delByPattern).not.toHaveBeenCalled();
     });
 
     it('ควรโยน NotFoundException หากไม่พบ Category ID หรือถูกลบไปแล้ว', async () => {
-      prismaMock.user.findFirst.mockResolvedValue({ id: 1 } as any);
+      prismaMock.user.findFirst.mockResolvedValue({ id: '019245bb-8e34-7389-9a74-9f8263590001' } as any);
       prismaMock.category.findFirst.mockResolvedValue(null);
 
       await expect(
@@ -126,9 +126,9 @@ describe('PostsService', () => {
           {
             title: 'Post',
             content: 'Content',
-            categoryId: 999, // invalid categoryId
+            categoryId: '019245bb-8e34-7389-9a74-9f8263590999', // invalid categoryId
           },
-          1,
+          '019245bb-8e34-7389-9a74-9f8263590001',
         ),
       ).rejects.toThrow(NotFoundException);
       expect(redisServiceMock.delByPattern).not.toHaveBeenCalled();
@@ -141,18 +141,18 @@ describe('PostsService', () => {
   describe('ownership & authorization', () => {
     it('Author สามารถแก้ไขบทความของตัวเองได้ และล้างแคช v2', async () => {
       const existingPost = {
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         title: 'My Post',
-        authorId: 10,
-        categoryId: 1,
+        authorId: '019245bb-8e34-7389-9a74-9f8263590010',
+        categoryId: '019245bb-8e34-7389-9a74-9f8263590001',
       };
       prismaMock.post.findFirst.mockResolvedValue(existingPost as any);
       prismaMock.post.update.mockResolvedValue({ ...existingPost, title: 'Updated' } as any);
 
       const result = await service.update(
-        1,
+        '019245bb-8e34-7389-9a74-9f8263590001',
         { title: 'Updated' },
-        { id: 10, role: 'AUTHOR' as any }, // เจ้าของบทความ
+        { id: '019245bb-8e34-7389-9a74-9f8263590010', role: 'AUTHOR' as any }, // เจ้าของบทความ
       );
 
       expect(result.title).toBe('Updated');
@@ -161,19 +161,19 @@ describe('PostsService', () => {
 
     it('Author ไม่สามารถแก้ไขบทความของคนอื่นได้ (โยน ForbiddenException)', async () => {
       const existingPost = {
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         title: 'Other Post',
-        authorId: 10, // บทความของ User 10
-        categoryId: 1,
+        authorId: '019245bb-8e34-7389-9a74-9f8263590010', // บทความของ User 10
+        categoryId: '019245bb-8e34-7389-9a74-9f8263590001',
       };
       prismaMock.post.findFirst.mockResolvedValue(existingPost as any);
 
       // User 99 (AUTHOR) พยายามมาแก้ไขบทความของ User 10
       await expect(
         service.update(
-          1,
+          '019245bb-8e34-7389-9a74-9f8263590001',
           { title: 'Hacked' },
-          { id: 99, role: 'AUTHOR' as any },
+          { id: '019245bb-8e34-7389-9a74-9f8263590099', role: 'AUTHOR' as any },
         ),
       ).rejects.toThrow();
       expect(redisServiceMock.delByPattern).not.toHaveBeenCalled();
@@ -181,19 +181,19 @@ describe('PostsService', () => {
 
     it('Admin สามารถแก้ไขบทความของใครก็ได้', async () => {
       const existingPost = {
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         title: 'Author Post',
-        authorId: 10,
-        categoryId: 1,
+        authorId: '019245bb-8e34-7389-9a74-9f8263590010',
+        categoryId: '019245bb-8e34-7389-9a74-9f8263590001',
       };
       prismaMock.post.findFirst.mockResolvedValue(existingPost as any);
       prismaMock.post.update.mockResolvedValue({ ...existingPost, title: 'Admin Fixed' } as any);
 
       // User 99 เป็น ADMIN แก้ไขโพสต์ของ User 10
       const result = await service.update(
-        1,
+        '019245bb-8e34-7389-9a74-9f8263590001',
         { title: 'Admin Fixed' },
-        { id: 99, role: 'ADMIN' as any },
+        { id: '019245bb-8e34-7389-9a74-9f8263590099', role: 'ADMIN' as any },
       );
 
       expect(result.title).toBe('Admin Fixed');
@@ -202,23 +202,23 @@ describe('PostsService', () => {
 
     it('Author สามารถลบบทความของตนเองได้ (Soft Delete) และล้างแคช v2', async () => {
       const existingPost = {
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         title: 'My Post to Delete',
-        authorId: 10,
+        authorId: '019245bb-8e34-7389-9a74-9f8263590010',
       };
       prismaMock.post.findFirst.mockResolvedValue(existingPost as any);
       prismaMock.post.update.mockResolvedValue({
         ...existingPost,
         deletedAt: new Date(),
-        author: { id: 10, name: 'Author' },
-        category: { id: 1, name: 'Tech' },
+        author: { id: '019245bb-8e34-7389-9a74-9f8263590010', name: 'Author' },
+        category: { id: '019245bb-8e34-7389-9a74-9f8263590001', name: 'Tech' },
       } as any);
 
-      await service.remove(1, { id: 10, role: 'AUTHOR' as any });
+      await service.remove('019245bb-8e34-7389-9a74-9f8263590001', { id: '019245bb-8e34-7389-9a74-9f8263590010', role: 'AUTHOR' as any });
 
       expect(prismaMock.post.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 1 },
+          where: { id: '019245bb-8e34-7389-9a74-9f8263590001' },
           data: { deletedAt: expect.any(Date) },
         }),
       );
@@ -233,7 +233,7 @@ describe('PostsService', () => {
     it('ควรโยน NotFoundException เมื่อไม่พบบทความหรือถูกลบไปแล้ว', async () => {
       prismaMock.post.findFirst.mockResolvedValue(null);
 
-      await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('019245bb-8e34-7389-9a74-9f8263590999')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -243,7 +243,7 @@ describe('PostsService', () => {
   describe('findAllV2 (v2)', () => {
     it('Cache Hit: ควรคืนค่าจาก Redis Cache ทันทีโดยไม่ต้องคิวรี Prisma', async () => {
       const cachedResult = {
-        data: [{ id: 1, title: 'Cached Post' }],
+        data: [{ id: '019245bb-8e34-7389-9a74-9f8263590001', title: 'Cached Post' }],
         meta: {
           total: 1,
           page: 1,
@@ -274,7 +274,7 @@ describe('PostsService', () => {
       // จำลองว่ามีโพสต์ทั้งหมด 25 รายการในฐานข้อมูล
       prismaMock.post.count.mockResolvedValue(25);
       // จำลองคืนค่าข้อมูล 10 รายการสำหรับหน้า 1
-      const mockPosts = Array(10).fill({ id: 1, title: 'Post' });
+      const mockPosts = Array(10).fill({ id: '019245bb-8e34-7389-9a74-9f8263590001', title: 'Post' });
       prismaMock.post.findMany.mockResolvedValue(mockPosts as any);
 
       const result = await service.findAllV2({ page: 1, limit: 10 });
@@ -308,7 +308,7 @@ describe('PostsService', () => {
     it('ควรกำหนด hasNextPage เป็น false เมื่ออยู่หน้าสุดท้าย', async () => {
       redisServiceMock.get.mockResolvedValue(null);
       prismaMock.post.count.mockResolvedValue(25);
-      prismaMock.post.findMany.mockResolvedValue(Array(5).fill({ id: 1 }) as any);
+      prismaMock.post.findMany.mockResolvedValue(Array(5).fill({ id: '019245bb-8e34-7389-9a74-9f8263590001' }) as any);
 
       // หน้า 3 (หน้าสุดท้ายจาก 25 รายการ หน้าละ 10)
       const result = await service.findAllV2({ page: 3, limit: 10 });
@@ -328,21 +328,21 @@ describe('PostsService', () => {
       const longContent = Array(400).fill('word').join(' ');
 
       const mockPost = {
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         title: 'Long Article',
         content: longContent,
-        categoryId: 5,
-        author: { id: 1, name: 'Author' },
-        category: { id: 5, name: 'Tech' },
+        categoryId: '019245bb-8e34-7389-9a74-9f8263590005',
+        author: { id: '019245bb-8e34-7389-9a74-9f8263590001', name: 'Author' },
+        category: { id: '019245bb-8e34-7389-9a74-9f8263590005', name: 'Tech' },
       };
       prismaMock.post.findFirst.mockResolvedValue(mockPost as any);
 
       const relatedMock = [
-        { id: 2, title: 'Related 1', isPublished: true, createdAt: new Date() },
+        { id: '019245bb-8e34-7389-9a74-9f8263590002', title: 'Related 1', isPublished: true, createdAt: new Date() },
       ];
       prismaMock.post.findMany.mockResolvedValue(relatedMock as any);
 
-      const result = await service.findOneV2(1);
+      const result = await service.findOneV2('019245bb-8e34-7389-9a74-9f8263590001');
 
       expect(result.readingTimeMinutes).toBe(2);
       expect(result.relatedPosts).toHaveLength(1);

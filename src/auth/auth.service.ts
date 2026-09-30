@@ -117,7 +117,7 @@ export class AuthService {
   /**
    * ดึงข้อมูลโปรไฟล์ผู้ใช้งาน (เฉพาะบัญชีที่ยัง Active)
    */
-  async getProfile(userId: number) {
+  async getProfile(userId: string) {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
       select: {
@@ -139,7 +139,7 @@ export class AuthService {
   /**
    * Helper Method สำหรับเซ็นลายเซ็นสร้าง JWT Token
    */
-  private async generateToken(userId: number, email: string, role: Role): Promise<string> {
+  private async generateToken(userId: string, email: string, role: Role): Promise<string> {
     const payload = {
       sub: userId,
       email,

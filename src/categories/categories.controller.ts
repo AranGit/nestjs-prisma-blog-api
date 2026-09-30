@@ -6,7 +6,7 @@ import {
   Patch,
   Param,
   Delete,
-  ParseIntPipe,
+  ParseUUIDPipe,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
@@ -68,10 +68,10 @@ export class CategoriesController {
    */
   @Get(':id')
   @ApiOperation({ summary: 'Get a category by ID (Public)', description: 'Returns category details and its associated posts.' })
-  @ApiParam({ name: 'id', type: Number, description: 'Category unique ID' })
+  @ApiParam({ name: 'id', type: String, description: 'Category unique UUID' })
   @ApiResponse({ status: 200, description: 'Category found.' })
   @ApiResponse({ status: 404, description: 'Category not found.' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.categoriesService.findOne(id);
   }
 
@@ -84,12 +84,12 @@ export class CategoriesController {
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a category (Admin only)', description: 'Requires ADMIN role.' })
-  @ApiParam({ name: 'id', type: Number, description: 'Category ID to update' })
+  @ApiParam({ name: 'id', type: String, description: 'Category UUID to update' })
   @ApiResponse({ status: 200, description: 'Category successfully updated.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Forbidden - Requires ADMIN role.' })
   @ApiResponse({ status: 404, description: 'Category not found.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateCategoryDto: UpdateCategoryDto) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateCategoryDto: UpdateCategoryDto) {
     return this.categoriesService.update(id, updateCategoryDto);
   }
 
@@ -102,12 +102,12 @@ export class CategoriesController {
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a category (Admin only)', description: 'Requires ADMIN role.' })
-  @ApiParam({ name: 'id', type: Number, description: 'Category ID to delete' })
+  @ApiParam({ name: 'id', type: String, description: 'Category UUID to delete' })
   @ApiResponse({ status: 200, description: 'Category successfully deleted.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Forbidden - Requires ADMIN role.' })
   @ApiResponse({ status: 404, description: 'Category not found.' })
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.categoriesService.remove(id);
   }
 }

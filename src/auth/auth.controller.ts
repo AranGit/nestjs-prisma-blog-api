@@ -55,7 +55,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user profile', description: 'Returns profile of the currently authenticated user.' })
   @ApiResponse({ status: 200, description: 'Profile retrieved successfully.' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token.' })
-  getProfile(@CurrentUser('id') userId: number) {
+  getProfile(@CurrentUser('id') userId: string) {
     return this.authService.getProfile(userId);
   }
 }

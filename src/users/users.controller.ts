@@ -6,7 +6,7 @@ import {
   Patch,
   Param,
   Delete,
-  ParseIntPipe,
+  ParseUUIDPipe,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
@@ -85,11 +85,11 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get a user by ID (Authenticated)', description: 'Retrieves a single user along with their authored posts.' })
-  @ApiParam({ name: 'id', type: Number, description: 'Unique user identifier' })
+  @ApiParam({ name: 'id', type: String, description: 'Unique user identifier (UUID)' })
   @ApiResponse({ status: 200, description: 'User found.' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Missing or invalid token.' })
   @ApiResponse({ status: 404, description: 'User with given ID not found.' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.findOne(id);
   }
 
@@ -101,15 +101,15 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a user (Self or Admin)', description: 'Partially updates existing user information. Users can only update their own profile unless ADMIN.' })
-  @ApiParam({ name: 'id', type: Number, description: 'User ID to update' })
+  @ApiParam({ name: 'id', type: String, description: 'User UUID to update' })
   @ApiResponse({ status: 200, description: 'User successfully updated.' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Missing or invalid token.' })
   @ApiResponse({ status: 403, description: 'Forbidden - You can only update your own profile.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
   update(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateUserDto: UpdateUserDto,
-    @CurrentUser() currentUser: { id: number; role: Role },
+    @CurrentUser() currentUser: { id: string; role: Role },
   ) {
     return this.usersService.update(id, updateUserDto, currentUser);
   }
@@ -123,12 +123,12 @@ export class UsersController {
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a user (Admin only)', description: 'Deletes a user account and cascades delete to their posts. Requires ADMIN role.' })
-  @ApiParam({ name: 'id', type: Number, description: 'User ID to delete' })
+  @ApiParam({ name: 'id', type: String, description: 'User UUID to delete' })
   @ApiResponse({ status: 200, description: 'User successfully deleted.' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Missing or invalid token.' })
   @ApiResponse({ status: 403, description: 'Forbidden - Requires ADMIN role.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.remove(id);
   }
 }

@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min, MinLength } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 
 /**
  * ==============================================================================
@@ -33,9 +32,7 @@ export class CreatePostDto {
   @IsOptional()
   isPublished?: boolean;
 
-  @ApiProperty({ example: 1, description: 'Category ID (Foreign Key to categories table, min 1)', minimum: 1 })
-  @IsInt()
-  @Min(1)
-  @Type(() => Number)
-  categoryId: number;
+  @ApiProperty({ example: '019245bb-8e34-7389-9a74-9f8263590002', description: 'Category ID (UUID v7 Foreign Key to categories table)' })
+  @IsUUID()
+  categoryId: string;
 }

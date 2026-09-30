@@ -53,7 +53,7 @@ describe('CategoriesService', () => {
       prismaMock.category.findUnique.mockResolvedValue(null);
 
       const mockCreatedCategory = {
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         name: 'Technology',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -74,7 +74,7 @@ describe('CategoriesService', () => {
     it('ควรโยน ConflictException (409) หากชื่อหมวดหมู่ซ้ำในระบบ', async () => {
       // [Arrange] จำลองว่ามีชื่อ 'Technology' อยู่แล้วในระบบ
       prismaMock.category.findUnique.mockResolvedValue({
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         name: 'Technology',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -97,14 +97,14 @@ describe('CategoriesService', () => {
     it('ควรคืนค่ารายการหมวดหมู่ทั้งหมดพร้อมการนับจำนวนบทความ', async () => {
       const mockCategories = [
         {
-          id: 1,
+          id: '019245bb-8e34-7389-9a74-9f8263590001',
           name: 'Design',
           createdAt: new Date(),
           updatedAt: new Date(),
           _count: { posts: 3 },
         },
         {
-          id: 2,
+          id: '019245bb-8e34-7389-9a74-9f8263590002',
           name: 'Technology',
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -139,7 +139,7 @@ describe('CategoriesService', () => {
   describe('findOne', () => {
     it('ควรคืนค่าหมวดหมู่เมื่อพบข้อมูลตาม ID', async () => {
       const mockCategory = {
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         name: 'Technology',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -148,16 +148,16 @@ describe('CategoriesService', () => {
       };
       prismaMock.category.findFirst.mockResolvedValue(mockCategory as any);
 
-      const result = await service.findOne(1);
+      const result = await service.findOne('019245bb-8e34-7389-9a74-9f8263590001');
 
       expect(result).toEqual(mockCategory);
-      expect(result.id).toBe(1);
+      expect(result.id).toBe('019245bb-8e34-7389-9a74-9f8263590001');
     });
 
     it('ควรโยน NotFoundException (404) เมื่อไม่พบหมวดหมู่ตาม ID หรือถูกลบไปแล้ว', async () => {
       prismaMock.category.findFirst.mockResolvedValue(null);
 
-      await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('019245bb-8e34-7389-9a74-9f8263590999')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -166,18 +166,18 @@ describe('CategoriesService', () => {
   // ─────────────────────────────────────────────────────────────────────────────
   describe('update', () => {
     it('ควรโยน ConflictException หากเปลี่ยนชื่อไปซ้ำกับหมวดหมู่อื่น', async () => {
-      // 1. หมวดหมู่ปัจจุบัน (id: 1, name: 'Old')
+      // 1. หมวดหมู่ปัจจุบัน (id: '019245bb-8e34-7389-9a74-9f8263590001', name: 'Old')
       prismaMock.category.findFirst.mockResolvedValueOnce({
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         name: 'Old',
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
         posts: [],
       } as any);
-      // 2. มีหมวดหมู่อื่น (id: 2) ที่ใช้ชื่อ 'DuplicateName' อยู่แล้ว
+      // 2. มีหมวดหมู่อื่น (id: '019245bb-8e34-7389-9a74-9f8263590002') ที่ใช้ชื่อ 'DuplicateName' อยู่แล้ว
       prismaMock.category.findUnique.mockResolvedValueOnce({
-        id: 2,
+        id: '019245bb-8e34-7389-9a74-9f8263590002',
         name: 'DuplicateName',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -185,7 +185,7 @@ describe('CategoriesService', () => {
       });
 
       await expect(
-        service.update(1, { name: 'DuplicateName' }),
+        service.update('019245bb-8e34-7389-9a74-9f8263590001', { name: 'DuplicateName' }),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -196,7 +196,7 @@ describe('CategoriesService', () => {
   describe('remove', () => {
     it('ควรทำ Soft Delete หมวดหมู่สำเร็จเมื่อไม่มีบทความผูกอยู่', async () => {
       prismaMock.category.findFirst.mockResolvedValue({
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         name: 'Technology',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -206,25 +206,25 @@ describe('CategoriesService', () => {
       // ไม่มี Active Post ผูกอยู่
       prismaMock.post.count.mockResolvedValue(0);
       prismaMock.category.update.mockResolvedValue({
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         name: 'Technology',
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: new Date(),
       } as any);
 
-      const result = await service.remove(1);
+      const result = await service.remove('019245bb-8e34-7389-9a74-9f8263590001');
 
-      expect(result.id).toBe(1);
+      expect(result.id).toBe('019245bb-8e34-7389-9a74-9f8263590001');
       expect(prismaMock.category.update).toHaveBeenCalledWith({
-        where: { id: 1 },
+        where: { id: '019245bb-8e34-7389-9a74-9f8263590001' },
         data: { deletedAt: expect.any(Date) },
       });
     });
 
     it('ควรโยน ConflictException หากยังมีบทความที่ Active ผูกอยู่กับหมวดหมู่ (Soft Restrict)', async () => {
       prismaMock.category.findFirst.mockResolvedValue({
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         name: 'Technology',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -234,7 +234,7 @@ describe('CategoriesService', () => {
       // มี Active Post ผูกอยู่ 2 บทความ
       prismaMock.post.count.mockResolvedValue(2);
 
-      await expect(service.remove(1)).rejects.toThrow(ConflictException);
+      await expect(service.remove('019245bb-8e34-7389-9a74-9f8263590001')).rejects.toThrow(ConflictException);
       expect(prismaMock.category.update).not.toHaveBeenCalled();
     });
   });

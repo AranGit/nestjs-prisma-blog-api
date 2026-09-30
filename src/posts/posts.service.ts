@@ -31,7 +31,7 @@ export class PostsService {
    * @param createPostDto ข้อมูลบทความ (title, content, categoryId)
    * @param authorId ID ผู้เขียนที่สกัดได้จาก JWT Token
    */
-  async create(createPostDto: CreatePostDto, authorId: number) {
+  async create(createPostDto: CreatePostDto, authorId: string) {
     // 1. ตรวจสอบว่า Author ID มีตัวตนและยังไม่ถูกลบ
     const author = await this.prisma.user.findFirst({
       where: { id: authorId, deletedAt: null },
@@ -106,7 +106,7 @@ export class PostsService {
   /**
    * ค้นหาบทความตาม ID (เฉพาะที่ยังไม่ถูก Soft Delete)
    */
-  async findOne(id: number) {
+  async findOne(id: string) {
     const post = await this.prisma.post.findFirst({
       where: { id, deletedAt: null },
       include: {
@@ -164,9 +164,9 @@ export class PostsService {
    * - ผู้ใช้ที่เป็น AUTHOR สามารถแก้ไขได้เฉพาะบทความที่ตนเองเป็นผู้เขียนเท่านั้น
    */
   async update(
-    id: number,
+    id: string,
     updatePostDto: UpdatePostDto,
-    currentUser: { id: number; role: Role },
+    currentUser: { id: string; role: Role },
   ) {
     const post = await this.findOne(id);
 
@@ -216,7 +216,7 @@ export class PostsService {
    * - ADMIN ลบบทความใดก็ได้
    * - AUTHOR ลบได้เฉพาะบทความของตนเอง
    */
-  async remove(id: number, currentUser: { id: number; role: Role }) {
+  async remove(id: string, currentUser: { id: string; role: Role }) {
     const post = await this.findOne(id);
 
     // ตรวจสอบสิทธิ์ความเป็นเจ้าของบทความ
@@ -355,7 +355,7 @@ export class PostsService {
   /**
    * V2: ดึงบทความเดี่ยวพร้อมคำนวณเวลาอ่าน (Reading Time) และบทความที่เกี่ยวข้อง (Related Posts)
    */
-  async findOneV2(id: number) {
+  async findOneV2(id: string) {
     const post = await this.findOne(id);
 
     // คำนวณเวลาอ่านโดยเฉลี่ยของมนุษย์ (~200 คำต่อนาที)

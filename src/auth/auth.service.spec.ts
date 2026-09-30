@@ -55,7 +55,7 @@ describe('AuthService', () => {
       prismaMock.user.findUnique.mockResolvedValue(null);
 
       const mockCreatedUser = {
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         email: 'author@example.com',
         name: 'Author One',
         role: Role.AUTHOR,
@@ -73,7 +73,7 @@ describe('AuthService', () => {
       expect(result.accessToken).toBe('mocked-jwt-token');
       expect(result.user.email).toBe('author@example.com');
       expect(jwtServiceMock.signAsync).toHaveBeenCalledWith({
-        sub: 1,
+        sub: '019245bb-8e34-7389-9a74-9f8263590001',
         email: 'author@example.com',
         role: Role.AUTHOR,
       });
@@ -85,7 +85,7 @@ describe('AuthService', () => {
     });
 
     it('ควรโยน ConflictException (409) หากอีเมลมีผู้ใช้งานแล้ว', async () => {
-      prismaMock.user.findUnique.mockResolvedValue({ id: 1 } as any);
+      prismaMock.user.findUnique.mockResolvedValue({ id: '019245bb-8e34-7389-9a74-9f8263590001' } as any);
 
       await expect(
         service.register({
@@ -106,7 +106,7 @@ describe('AuthService', () => {
     it('ควรเข้าสู่ระบบสำเร็จเมื่อระบุ email และ password ถูกต้อง', async () => {
       const hashedPassword = await bcrypt.hash('correctPassword', 10);
       prismaMock.user.findFirst.mockResolvedValue({
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         email: 'john@example.com',
         password: hashedPassword,
         name: 'John Doe',
@@ -121,7 +121,7 @@ describe('AuthService', () => {
       expect(result.accessToken).toBe('mocked-jwt-token');
       expect(result.user.role).toBe(Role.ADMIN);
       expect(jwtServiceMock.signAsync).toHaveBeenCalledWith({
-        sub: 1,
+        sub: '019245bb-8e34-7389-9a74-9f8263590001',
         email: 'john@example.com',
         role: Role.ADMIN,
       });
@@ -141,7 +141,7 @@ describe('AuthService', () => {
     it('ควรโยน UnauthorizedException (401) เมื่อรหัสผ่านไม่ตรงกัน', async () => {
       const hashedPassword = await bcrypt.hash('realPassword', 10);
       prismaMock.user.findFirst.mockResolvedValue({
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         email: 'john@example.com',
         password: hashedPassword,
         name: 'John Doe',
@@ -163,7 +163,7 @@ describe('AuthService', () => {
   describe('getProfile', () => {
     it('ควรคืนค่าข้อมูล Profile ของผู้ใช้', async () => {
       const mockProfile = {
-        id: 1,
+        id: '019245bb-8e34-7389-9a74-9f8263590001',
         email: 'john@example.com',
         name: 'John Doe',
         role: Role.AUTHOR,
@@ -171,7 +171,7 @@ describe('AuthService', () => {
       };
       prismaMock.user.findFirst.mockResolvedValue(mockProfile as any);
 
-      const result = await service.getProfile(1);
+      const result = await service.getProfile('019245bb-8e34-7389-9a74-9f8263590001');
 
       expect(result).toEqual(mockProfile);
     });
@@ -179,7 +179,7 @@ describe('AuthService', () => {
     it('ควรโยน UnauthorizedException หากไม่พบ User บัญชีนี้', async () => {
       prismaMock.user.findFirst.mockResolvedValue(null);
 
-      await expect(service.getProfile(999)).rejects.toThrow(UnauthorizedException);
+      await expect(service.getProfile('019245bb-8e34-7389-9a74-9f8263590999')).rejects.toThrow(UnauthorizedException);
     });
   });
 });

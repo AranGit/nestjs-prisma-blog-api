@@ -6,7 +6,7 @@ import {
   Patch,
   Param,
   Delete,
-  ParseIntPipe,
+  ParseUUIDPipe,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
@@ -49,7 +49,7 @@ export class PostsController {
   @ApiResponse({ status: 404, description: 'Category not found.' })
   create(
     @Body() createPostDto: CreatePostDto,
-    @CurrentUser('id') userId: number,
+    @CurrentUser('id') userId: string,
   ) {
     return this.postsService.create(createPostDto, userId);
   }
@@ -82,10 +82,10 @@ export class PostsController {
    */
   @Get(':id')
   @ApiOperation({ summary: 'Get a post by ID (Public)', description: 'Returns post details with author and category.' })
-  @ApiParam({ name: 'id', type: Number, description: 'Post ID' })
+  @ApiParam({ name: 'id', type: String, description: 'Post UUID' })
   @ApiResponse({ status: 200, description: 'Post found.' })
   @ApiResponse({ status: 404, description: 'Post not found.' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.postsService.findOne(id);
   }
 
@@ -97,13 +97,13 @@ export class PostsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a post (Owner or Admin)', description: 'Authors can only update their own posts; Admins can update any.' })
-  @ApiParam({ name: 'id', type: Number, description: 'Post ID' })
+  @ApiParam({ name: 'id', type: String, description: 'Post UUID' })
   @ApiResponse({ status: 200, description: 'Post successfully updated.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Forbidden - You do not own this post.' })
   @ApiResponse({ status: 404, description: 'Post or Category not found.' })
   update(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updatePostDto: UpdatePostDto,
     @CurrentUser() user: User,
   ) {
@@ -118,13 +118,13 @@ export class PostsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a post (Owner or Admin)', description: 'Authors can only delete their own posts; Admins can delete any.' })
-  @ApiParam({ name: 'id', type: Number, description: 'Post ID' })
+  @ApiParam({ name: 'id', type: String, description: 'Post UUID' })
   @ApiResponse({ status: 200, description: 'Post successfully deleted.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Forbidden - You do not own this post.' })
   @ApiResponse({ status: 404, description: 'Post not found.' })
   remove(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: User,
   ) {
     return this.postsService.remove(id, user);

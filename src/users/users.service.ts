@@ -87,7 +87,7 @@ export class UsersService {
    * ค้นหาผู้ใช้รายคนตาม ID (Get User by ID)
    * รวมรายการบทความ (posts) ที่ยังไม่ถูกลบซึ่งผู้ใช้นี้เป็นผู้เขียนกลับไปด้วย
    */
-  async findOne(id: number) {
+  async findOne(id: string) {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
       select: {
@@ -123,9 +123,9 @@ export class UsersService {
    * พร้อมทั้งตรวจสอบสิทธิ์ความเป็นเจ้าของบัญชี (Ownership Check)
    */
   async update(
-    id: number,
+    id: string,
     updateUserDto: UpdateUserDto,
-    currentUser: { id: number; role: Role },
+    currentUser: { id: string; role: Role },
   ) {
     // 1. ตรวจสอบสิทธิ์: ผู้ใช้แก้ไขได้เฉพาะโปรไฟล์ของตนเอง เว้นแต่เป็น ADMIN
     if (currentUser.role !== Role.ADMIN && currentUser.id !== id) {
@@ -170,7 +170,7 @@ export class UsersService {
    * 1. มาร์ก deletedAt ของ User
    * 2. Soft delete บทความทั้งหมดของผู้ใช้คนนี้พร้อมกัน
    */
-  async remove(id: number) {
+  async remove(id: string) {
     await this.findOne(id);
 
     const now = new Date();
