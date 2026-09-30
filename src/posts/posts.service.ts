@@ -32,17 +32,17 @@ export class PostsService {
    * @param authorId ID ผู้เขียนที่สกัดได้จาก JWT Token
    */
   async create(createPostDto: CreatePostDto, authorId: number) {
-    // 1. ตรวจสอบว่า Author ID มีตัวตนอยู่ในตาราง users
-    const author = await this.prisma.user.findUnique({
-      where: { id: authorId },
+    // 1. ตรวจสอบว่า Author ID มีตัวตนและยังไม่ถูกลบ
+    const author = await this.prisma.user.findFirst({
+      where: { id: authorId, deletedAt: null },
     });
     if (!author) {
       throw new NotFoundException(`User with ID ${authorId} not found`);
     }
 
-    // 2. ตรวจสอบว่า Category ID มีตัวตนอยู่ในตาราง categories
-    const category = await this.prisma.category.findUnique({
-      where: { id: createPostDto.categoryId },
+    // 2. ตรวจสอบว่า Category ID มีตัวตนและยังไม่ถูกลบ
+    const category = await this.prisma.category.findFirst({
+      where: { id: createPostDto.categoryId, deletedAt: null },
     });
     if (!category) {
       throw new NotFoundException(`Category with ID ${createPostDto.categoryId} not found`);
@@ -78,10 +78,11 @@ export class PostsService {
   }
 
   /**
-   * ดึงบทความทั้งหมด (V1: คืนค่าเป็น Raw Array เรียงจากใหม่ไปเก่า)
+   * ดึงบทความทั้งหมด (V1: คืนค่าเป็น Raw Array เรียงจากใหม่ไปเก่า เฉพาะที่ยังไม่ถูก Soft Delete)
    */
   async findAll() {
     return this.prisma.post.findMany({
+      where: { deletedAt: null },
       include: {
         author: {
           select: {
@@ -102,11 +103,11 @@ export class PostsService {
   }
 
   /**
-   * ค้นหาบทความตาม ID
+   * ค้นหาบทความตาม ID (เฉพาะที่ยังไม่ถูก Soft Delete)
    */
   async findOne(id: number) {
-    const post = await this.prisma.post.findUnique({
-      where: { id },
+    const post = await this.prisma.post.findFirst({
+      where: { id, deletedAt: null },
       include: {
         author: {
           select: {
@@ -132,11 +133,11 @@ export class PostsService {
   }
 
   /**
-   * ดึงเฉพาะบทความที่เผยแพร่แล้ว (isPublished = true)
+   * ดึงเฉพาะบทความที่เผยแพร่แล้ว (isPublished = true และ deletedAt = null)
    */
   async findPublished() {
     return this.prisma.post.findMany({
-      where: { isPublished: true },
+      where: { isPublished: true, deletedAt: null },
       include: {
         author: {
           select: {
@@ -174,8 +175,8 @@ export class PostsService {
     }
 
     if (updatePostDto.categoryId) {
-      const category = await this.prisma.category.findUnique({
-        where: { id: updatePostDto.categoryId },
+      const category = await this.prisma.category.findFirst({
+        where: { id: updatePostDto.categoryId, deletedAt: null },
       });
       if (!category) {
         throw new NotFoundException(`Category with ID ${updatePostDto.categoryId} not found`);
@@ -209,7 +210,7 @@ export class PostsService {
   }
 
   /**
-   * ลบบทความตาม ID
+   * ลบบทความตาม ID (Soft Delete: บันทึก deletedAt เป็นเวลาปัจจุบัน)
    * Ownership Authorization:
    * - ADMIN ลบบทความใดก็ได้
    * - AUTHOR ลบได้เฉพาะบทความของตนเอง
@@ -222,8 +223,9 @@ export class PostsService {
       throw new ForbiddenException('You can only delete your own posts');
     }
 
-    const deletedPost = await this.prisma.post.delete({
+    const deletedPost = await this.prisma.post.update({
       where: { id },
+      data: { deletedAt: new Date() },
       include: {
         author: {
           select: {
@@ -251,7 +253,7 @@ export class PostsService {
   // ═══════════════════════════════════════════════════════════
 
   /**
-   * V2: ดึงบทความแบบแบ่งหน้า (Pagination) พร้อมค้นหา (Search & Filter) + Redis Caching
+   * V2: ดึงบทความแบบแบ่งหน้า (Pagination) พร้อมค้นหา (Search & Filter) + Redis Caching (เฉพาะที่ยังไม่ถูก Soft Delete)
    *
    * Cache-Aside Pattern (Lazy Loading):
    * 1. สร้าง Unique Cache Key ตาม parameter ทั้งหมด (page, limit, search, categoryId)
@@ -287,8 +289,8 @@ export class PostsService {
       return cachedData;
     }
 
-    // 3. Cache Miss: สร้าง Where Clause แบบ Dynamic ตามเงื่อนไขที่ส่งเข้ามา
-    const where: any = {};
+    // 3. Cache Miss: สร้าง Where Clause แบบ Dynamic กรองเฉพาะโพสต์ที่ยังไม่ถูกลบ (deletedAt: null)
+    const where: any = { deletedAt: null };
 
     // ค้นหาข้อความใน Title หรือ Content (Case-Insensitive)
     if (query.search) {
@@ -359,11 +361,12 @@ export class PostsService {
     const wordCount = post.content.trim().split(/\s+/).length;
     const readingTimeMinutes = Math.max(1, Math.ceil(wordCount / 200));
 
-    // ค้นหาบทความแนะนำในหมวดหมู่เดียวกัน (ดึง 3 บทความล่าสุด ยกเว้นบทความปัจจุบัน)
+    // ค้นหาบทความแนะนำในหมวดหมู่เดียวกัน (ดึง 3 บทความล่าสุด ยกเว้นบทความปัจจุบัน และต้องยังไม่ถูกลบ)
     const relatedPosts = await this.prisma.post.findMany({
       where: {
         categoryId: post.categoryId,
         id: { not: post.id },
+        deletedAt: null,
       },
       take: 3,
       select: {
@@ -383,15 +386,15 @@ export class PostsService {
   }
 
   /**
-   * V2: ดึงสถิติภาพรวมของบล็อก (Analytics Summary)
+   * V2: ดึงสถิติภาพรวมของบล็อก (Analytics Summary - นับเฉพาะ Resource ที่ยัง Active)
    * ใช้สำหรับการแสดงผลบน Dashboard ของผู้ดูแลระบบ
    */
   async getStatsV2() {
     const [totalPosts, publishedPosts, totalCategories, totalUsers] = await Promise.all([
-      this.prisma.post.count(),
-      this.prisma.post.count({ where: { isPublished: true } }),
-      this.prisma.category.count(),
-      this.prisma.user.count(),
+      this.prisma.post.count({ where: { deletedAt: null } }),
+      this.prisma.post.count({ where: { isPublished: true, deletedAt: null } }),
+      this.prisma.category.count({ where: { deletedAt: null } }),
+      this.prisma.user.count({ where: { deletedAt: null } }),
     ]);
 
     return {

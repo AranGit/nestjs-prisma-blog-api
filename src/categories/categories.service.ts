@@ -43,14 +43,19 @@ export class CategoriesService {
   }
 
   /**
-   * ดึงรายชื่อหมวดหมู่ทั้งหมด เรียงตามตัวอักษร พร้อมจำนวนบทความในแต่ละหมวดหมู่
+   * ดึงรายชื่อหมวดหมู่ทั้งหมด เรียงตามตัวอักษร พร้อมจำนวนบทความในแต่ละหมวดหมู่ (เฉพาะที่ยังไม่ถูกลบ)
    */
   async findAll() {
     return this.prisma.category.findMany({
+      where: { deletedAt: null },
       include: {
-        // นับจำนวนบทความที่อยู่ในแต่ละหมวดหมู่ด้วย Database COUNT Query
+        // นับจำนวนบทความที่ยังไม่ถูกลบในแต่ละหมวดหมู่ด้วย Database COUNT Query
         _count: {
-          select: { posts: true },
+          select: {
+            posts: {
+              where: { deletedAt: null },
+            },
+          },
         },
       },
       // เรียงลำดับชื่อจาก A-Z
@@ -59,13 +64,14 @@ export class CategoriesService {
   }
 
   /**
-   * ดึงข้อมูลหมวดหมู่รายอัน พร้อมรายการบทความที่สังกัดในหมวดหมู่นี้
+   * ดึงข้อมูลหมวดหมู่รายอัน พร้อมรายการบทความที่สังกัดในหมวดหมู่นี้ (เฉพาะที่ยังไม่ถูกลบ)
    */
   async findOne(id: number) {
-    const category = await this.prisma.category.findUnique({
-      where: { id },
+    const category = await this.prisma.category.findFirst({
+      where: { id, deletedAt: null },
       include: {
         posts: {
+          where: { deletedAt: null },
           select: {
             id: true,
             title: true,
@@ -108,14 +114,25 @@ export class CategoriesService {
   }
 
   /**
-   * ลบหมวดหมู่
-   * หากหมวดหมู่นี้มีบทความอยู่ จะไม่สามารถลบได้เนื่องจากติด Foreign Key Restrict
+   * ลบหมวดหมู่ (Soft Delete)
+   * Soft Restrict: หากหมวดหมู่นี้ยังมีบทความที่ Active อยู่ จะไม่อนุญาตให้ลบ
    */
   async remove(id: number) {
     await this.findOne(id);
 
-    return this.prisma.category.delete({
+    const activePostsCount = await this.prisma.post.count({
+      where: { categoryId: id, deletedAt: null },
+    });
+
+    if (activePostsCount > 0) {
+      throw new ConflictException(
+        `Cannot delete category because it still has ${activePostsCount} active post(s)`,
+      );
+    }
+
+    return this.prisma.category.update({
       where: { id },
+      data: { deletedAt: new Date() },
     });
   }
 }

@@ -61,12 +61,15 @@ describe('PostsService', () => {
   // ─────────────────────────────────────────────────────────────────────────────
   // 1. V1 Test Suite: create()
   // ─────────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 1. V1 Test Suite: create()
+  // ─────────────────────────────────────────────────────────────────────────────
   describe('create (v1)', () => {
     it('ควรสร้างบทความสำเร็จเมื่อ Author และ Category มีอยู่จริง', async () => {
-      // 1. Author มีอยู่จริง
-      prismaMock.user.findUnique.mockResolvedValue({ id: 1 } as any);
-      // 2. Category มีอยู่จริง
-      prismaMock.category.findUnique.mockResolvedValue({ id: 2 } as any);
+      // 1. Author มีอยู่จริงและยังไม่ถูกลบ
+      prismaMock.user.findFirst.mockResolvedValue({ id: 1 } as any);
+      // 2. Category มีอยู่จริงและยังไม่ถูกลบ
+      prismaMock.category.findFirst.mockResolvedValue({ id: 2 } as any);
 
       const mockCreatedPost = {
         id: 10,
@@ -98,8 +101,8 @@ describe('PostsService', () => {
       expect(redisServiceMock.delByPattern).toHaveBeenCalledWith('posts:v2:*');
     });
 
-    it('ควรโยน NotFoundException หากไม่พบ Author ID', async () => {
-      prismaMock.user.findUnique.mockResolvedValue(null);
+    it('ควรโยน NotFoundException หากไม่พบ Author ID หรือถูกลบไปแล้ว', async () => {
+      prismaMock.user.findFirst.mockResolvedValue(null);
 
       await expect(
         service.create(
@@ -114,9 +117,9 @@ describe('PostsService', () => {
       expect(redisServiceMock.delByPattern).not.toHaveBeenCalled();
     });
 
-    it('ควรโยน NotFoundException หากไม่พบ Category ID', async () => {
-      prismaMock.user.findUnique.mockResolvedValue({ id: 1 } as any);
-      prismaMock.category.findUnique.mockResolvedValue(null);
+    it('ควรโยน NotFoundException หากไม่พบ Category ID หรือถูกลบไปแล้ว', async () => {
+      prismaMock.user.findFirst.mockResolvedValue({ id: 1 } as any);
+      prismaMock.category.findFirst.mockResolvedValue(null);
 
       await expect(
         service.create(
@@ -143,7 +146,7 @@ describe('PostsService', () => {
         authorId: 10,
         categoryId: 1,
       };
-      prismaMock.post.findUnique.mockResolvedValue(existingPost as any);
+      prismaMock.post.findFirst.mockResolvedValue(existingPost as any);
       prismaMock.post.update.mockResolvedValue({ ...existingPost, title: 'Updated' } as any);
 
       const result = await service.update(
@@ -163,7 +166,7 @@ describe('PostsService', () => {
         authorId: 10, // บทความของ User 10
         categoryId: 1,
       };
-      prismaMock.post.findUnique.mockResolvedValue(existingPost as any);
+      prismaMock.post.findFirst.mockResolvedValue(existingPost as any);
 
       // User 99 (AUTHOR) พยายามมาแก้ไขบทความของ User 10
       await expect(
@@ -183,7 +186,7 @@ describe('PostsService', () => {
         authorId: 10,
         categoryId: 1,
       };
-      prismaMock.post.findUnique.mockResolvedValue(existingPost as any);
+      prismaMock.post.findFirst.mockResolvedValue(existingPost as any);
       prismaMock.post.update.mockResolvedValue({ ...existingPost, title: 'Admin Fixed' } as any);
 
       // User 99 เป็น ADMIN แก้ไขโพสต์ของ User 10
@@ -197,19 +200,27 @@ describe('PostsService', () => {
       expect(redisServiceMock.delByPattern).toHaveBeenCalledWith('posts:v2:*');
     });
 
-    it('Author สามารถลบบทความของตนเองได้ และล้างแคช v2', async () => {
+    it('Author สามารถลบบทความของตนเองได้ (Soft Delete) และล้างแคช v2', async () => {
       const existingPost = {
         id: 1,
         title: 'My Post to Delete',
         authorId: 10,
       };
-      prismaMock.post.findUnique.mockResolvedValue(existingPost as any);
-      prismaMock.post.delete.mockResolvedValue(existingPost as any);
+      prismaMock.post.findFirst.mockResolvedValue(existingPost as any);
+      prismaMock.post.update.mockResolvedValue({
+        ...existingPost,
+        deletedAt: new Date(),
+        author: { id: 10, name: 'Author' },
+        category: { id: 1, name: 'Tech' },
+      } as any);
 
       await service.remove(1, { id: 10, role: 'AUTHOR' as any });
 
-      expect(prismaMock.post.delete).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 1 } }),
+      expect(prismaMock.post.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 1 },
+          data: { deletedAt: expect.any(Date) },
+        }),
       );
       expect(redisServiceMock.delByPattern).toHaveBeenCalledWith('posts:v2:*');
     });
@@ -219,8 +230,8 @@ describe('PostsService', () => {
   // 2. V1 Test Suite: findOne()
   // ─────────────────────────────────────────────────────────────────────────────
   describe('findOne (v1)', () => {
-    it('ควรโยน NotFoundException เมื่อไม่พบบทความ', async () => {
-      prismaMock.post.findUnique.mockResolvedValue(null);
+    it('ควรโยน NotFoundException เมื่อไม่พบบทความหรือถูกลบไปแล้ว', async () => {
+      prismaMock.post.findFirst.mockResolvedValue(null);
 
       await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
     });
@@ -324,7 +335,7 @@ describe('PostsService', () => {
         author: { id: 1, name: 'Author' },
         category: { id: 5, name: 'Tech' },
       };
-      prismaMock.post.findUnique.mockResolvedValue(mockPost as any);
+      prismaMock.post.findFirst.mockResolvedValue(mockPost as any);
 
       const relatedMock = [
         { id: 2, title: 'Related 1', isPublished: true, createdAt: new Date() },

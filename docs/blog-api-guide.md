@@ -68,8 +68,8 @@ flowchart TD
 
 ```mermaid
 erDiagram
-    users ||--o{ posts : "authorId (Cascade Delete)"
-    categories ||--o{ posts : "categoryId (Restrict Delete)"
+    users ||--o{ posts : "authorId (Soft Cascade Transaction)"
+    categories ||--o{ posts : "categoryId (Soft Restrict Check)"
 
     users {
         int id PK
@@ -79,6 +79,7 @@ erDiagram
         Role role "ADMIN | AUTHOR"
         datetime createdAt
         datetime updatedAt
+        datetime deletedAt "Soft Delete Timestamp (Indexed)"
     }
 
     categories {
@@ -86,6 +87,7 @@ erDiagram
         string name UK "Unique Index"
         datetime createdAt
         datetime updatedAt
+        datetime deletedAt "Soft Delete Timestamp (Indexed)"
     }
 
     posts {
@@ -97,16 +99,25 @@ erDiagram
         int categoryId FK "References categories.id"
         datetime createdAt
         datetime updatedAt
+        datetime deletedAt "Soft Delete Timestamp (Indexed)"
     }
 ```
 
-### Referential Integrity Constraints Matrix
-1. **`onDelete: Cascade` (User -> Post)**
-   - เมื่อลบ User ผู้เขียน บทความทั้งหมดที่ผู้ใช้นี้เขียนจะถูกลบตามทันทีอัตโนมัติ
-   - ป้องกันไม่ให้มีบทความที่ `authorId` ชี้ไปหา User ที่ไม่มีตัวตนในตาราง
-2. **`onDelete: Restrict` (Category -> Post)**
-   - หาก Category ยังมี Post อ้างอิงอยู่ Database จะ**ปฏิเสธคำสั่งลบ**
-   - ช่วยรักษาข้อมูลบทความ ไม่ให้หมวดหมู่ของบทความสูญหายจนกลายเป็นข้อมูลกำพร้า
+### Referential Integrity Constraints & Soft Delete Architecture
+
+#### 1. Hard Delete vs Soft Delete: แนวคิดและข้อได้เปรียบทางธุรกิจ
+* **Hard Delete (SQL `DELETE`)**: ข้อมูลจะถูกทำลายทิ้งจาก Disk ถาวร หากเกิด Human Error หรือลบผิดพลาดจะไม่สามารถกู้คืนได้ และขัดต่อข้อกำหนด Audit Log ในระบบ Enterprise
+* **Soft Delete (SQL `UPDATE ... SET deletedAt = NOW()`)**: 
+  - ข้อมูลจริงยังคงอยู่ โดยมาร์กเวลาที่ถูกลบด้วยคอลัมน์ `deletedAt DateTime?`
+  - **เหตุผลที่เลือกใช้ `deletedAt DateTime?` แทน `isDeleted Boolean`**: การเก็บเป็น Timestamp ทำให้รู้ประวัติว่าใครถูกลบเมื่อใด รองรับนโยบาย Data Retention (เช่น ล้างข้อมูลที่ถูกลบเกิน 90 วันทิ้ง) และการปฏิบัติตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล (PDPA / GDPR)
+  - **Index Optimization**: มีการกำหนด `@@index([deletedAt])` เพื่อให้ Query `WHERE "deletedAt" IS NULL` ทำงานผ่าน B-Tree Index อย่างรวดเร็ว
+
+#### 2. กลไกการจัดการความสัมพันธ์ (Application-Level Soft Cascading)
+* **User -> Post (Soft Cascade)**:
+  - ในระดับ Database ข้อกำหนด `onDelete: Cascade` จะทำงานเมื่อมีคำสั่ง SQL `DELETE` จริงเท่านั้น
+  - สำหรับ Soft Delete ระบบจึงใช้ **Prisma `$transaction`** ใน `UsersService.remove()` เพื่อมาร์ก `deletedAt` ของผู้ใช้และบทความทั้งหมดของผู้ใช้นั้นพร้อมกันอย่าง Atomic
+* **Category -> Post (Soft Restrict)**:
+  - ก่อนทำการ Soft Delete Category ใน `CategoriesService.remove()` ระบบจะตรวจสอบก่อนว่ามี Active Post (`where: { categoryId, deletedAt: null }`) หลงเหลืออยู่หรือไม่ หากยังมีอยู่ จะปฏิเสธคำสั่งลบด้วย `409 ConflictException` เพื่อรักษาความสมบูรณ์ของข้อมูล (Data Integrity)
 
 ---
 
@@ -258,12 +269,12 @@ flowchart LR
     Service -.->|Assert Result| TestSpec
 ```
 
-### รายการ Test Suites ทั้งหมด (46 Tests):
-- `src/auth/auth.service.spec.ts` (7 tests)
-- `src/auth/guards/roles.guard.spec.ts` (3 tests)
-- `src/categories/categories.service.spec.ts` (7 tests)
-- `src/users/users.service.spec.ts` (8 tests)
-- `src/posts/posts.service.spec.ts` (13 tests: V1 CRUD, Ownership, V2 Pagination, Cache Hit/Miss, Invalidation)
+### รายการ Test Suites ทั้งหมด (47 Tests):
+- `src/auth/auth.service.spec.ts` (7 tests: Register, Login, Invalid credentials, Active user verification)
+- `src/auth/guards/roles.guard.spec.ts` (3 tests: Metadata extraction, Admin access, Role rejection)
+- `src/categories/categories.service.spec.ts` (8 tests: Duplicate check, CRUD, Soft Delete, Soft Restrict check)
+- `src/users/users.service.spec.ts` (8 tests: Duplicate email, bcrypt integration, Role provisioning, Soft Cascade Transaction)
+- `src/posts/posts.service.spec.ts` (13 tests: V1 CRUD, Soft Delete & Ownership, V2 Pagination, Cache Hit/Miss, Invalidation)
 - `src/redis/redis.service.spec.ts` (8 tests: get, set with TTL, del, delByPattern via scanStream)
 
 ### รูปแบบการเขียน Unit Test (AAA Pattern):
@@ -271,7 +282,7 @@ flowchart LR
 it('ควรสร้างหมวดหมู่สำเร็จเมื่อชื่อไม่ซ้ำ', async () => {
   // 1. Arrange: ตั้งค่า Mock ให้ findUnique ตอบ null (ไม่ซ้ำ)
   prismaMock.category.findUnique.mockResolvedValue(null);
-  prismaMock.category.create.mockResolvedValue({ id: 1, name: 'Tech', createdAt: new Date(), updatedAt: new Date() });
+  prismaMock.category.create.mockResolvedValue({ id: 1, name: 'Tech', createdAt: new Date(), updatedAt: new Date(), deletedAt: null });
 
   // 2. Act: เรียก method ที่ต้องการทดสอบ
   const result = await service.create({ name: 'Tech' });
@@ -284,7 +295,7 @@ it('ควรสร้างหมวดหมู่สำเร็จเมื�
 
 ### คำสั่งรัน Test:
 ```bash
-npm test            # รันการทดสอบทั้งหมด (46 tests)
+npm test            # รันการทดสอบทั้งหมด (47 tests)
 npm run test:watch  # รันแบบ Watch Mode
 npm run test:cov    # รายงาน Coverage
 ```

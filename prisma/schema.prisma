@@ -48,12 +48,16 @@ model User {
   // @updatedAt: อัปเดต Timestamp อัตโนมัติทุกครั้งที่มีการแก้ไข Record
   updatedAt DateTime @updatedAt
 
+  // Soft Delete: วันเวลาที่ถูกลบ (null = ใช้งานอยู่ / Active)
+  deletedAt DateTime?
+
   // 1-to-Many Relation: ผู้ใช้ 1 คน สามารถเขียนได้หลายบทความ (User -> Post[])
   // ไม่ได้สร้าง Column จริงในตาราง users แต่เป็น Virtual field สำหรับ Prisma Client
   posts     Post[]
 
   // @@map: แมปชื่อ Model "User" ให้ตรงกับชื่อตารางจริงใน PostgreSQL เป็นตัวพิมพ์เล็ก "users"
   // Best Practice ใน PostgreSQL นิยมใช้ snake_case หรือ lowercase plural table names
+  @@index([deletedAt])
   @@map("users")
 }
 
@@ -103,6 +107,10 @@ model Post {
   // ป้องกันไม่ให้เกิดบทความที่ไม่มีหมวดหมู่ (Orphaned posts)
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
+  // Soft Delete: วันเวลาที่ถูกลบ (null = ยังไม่ถูกลบ / Active)
+  deletedAt   DateTime?
+
+  @@index([deletedAt])
   @@map("posts")
 }
 
@@ -120,8 +128,12 @@ model Category {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Soft Delete: วันเวลาที่ถูกลบ (null = ยังไม่ถูกลบ / Active)
+  deletedAt DateTime?
+
   // 1-to-Many Relation: 1 หมวดหมู่มีได้หลายบทความ
   posts     Post[]
 
+  @@index([deletedAt])
   @@map("categories")
 }

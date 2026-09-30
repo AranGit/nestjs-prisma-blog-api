@@ -65,10 +65,11 @@ export class UsersService {
   }
 
   /**
-   * ดึงรายชื่อผู้ใช้ทั้งหมด (Get All Users)
+   * ดึงรายชื่อผู้ใช้ทั้งหมด (Get All Users - เฉพาะที่ยังไม่ถูก Soft Delete)
    */
   async findAll() {
     return this.prisma.user.findMany({
+      where: { deletedAt: null },
       select: {
         id: true,
         email: true,
@@ -82,11 +83,11 @@ export class UsersService {
 
   /**
    * ค้นหาผู้ใช้รายคนตาม ID (Get User by ID)
-   * รวมรายการบทความ (posts) ที่ผู้ใช้นี้เป็นผู้เขียนกลับไปด้วย
+   * รวมรายการบทความ (posts) ที่ยังไม่ถูกลบซึ่งผู้ใช้นี้เป็นผู้เขียนกลับไปด้วย
    */
   async findOne(id: number) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
+    const user = await this.prisma.user.findFirst({
+      where: { id, deletedAt: null },
       select: {
         id: true,
         email: true,
@@ -94,8 +95,9 @@ export class UsersService {
         role: true,
         createdAt: true,
         updatedAt: true,
-        // Relation Query: ดึงบทความของผู้ใช้นี้มาด้วยพร้อมกัน
+        // Relation Query: ดึงเฉพาะบทความที่ยังไม่ถูกลบ
         posts: {
+          where: { deletedAt: null },
           select: {
             id: true,
             title: true,
@@ -115,7 +117,7 @@ export class UsersService {
 
   /**
    * แก้ไขข้อมูลผู้ใช้ (Update User)
-   * ตรวจสอบว่าผู้ใช้มีตัวตนอยู่จริงก่อนทำการอัปเดต
+   * ตรวจสอบว่าผู้ใช้มีตัวตนอยู่จริงและยังไม่ถูกลบก่อนทำการอัปเดต
    */
   async update(id: number, updateUserDto: UpdateUserDto) {
     // ตรวจสอบก่อนว่า User ID นี้มีอยู่จริงไหม (ถ้าไม่มีจะ throw NotFoundException 404 ทันที)
@@ -141,20 +143,31 @@ export class UsersService {
   }
 
   /**
-   * ลบผู้ใช้ (Delete User)
-   * เนื่องจาก Prisma Schema ตั้งค่า onDelete: Cascade เอาไว้
-   * หากลบ User นี้ โพสต์ทั้งหมดของเขาจะถูกลบไปด้วยโดยอัตโนมัติในฐานข้อมูล
+   * ลบผู้ใช้ (Soft Delete User)
+   * ดำเนินการแบบ Application-Level Soft Cascade ภายใต้ Prisma Transaction:
+   * 1. มาร์ก deletedAt ของ User
+   * 2. Soft delete บทความทั้งหมดของผู้ใช้คนนี้พร้อมกัน
    */
   async remove(id: number) {
     await this.findOne(id);
 
-    return this.prisma.user.delete({
-      where: { id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-      },
-    });
+    const now = new Date();
+    const [deletedUser] = await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id },
+        data: { deletedAt: now },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+        },
+      }),
+      this.prisma.post.updateMany({
+        where: { authorId: id, deletedAt: null },
+        data: { deletedAt: now },
+      }),
+    ]);
+
+    return deletedUser;
   }
 }

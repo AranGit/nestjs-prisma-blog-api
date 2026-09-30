@@ -116,9 +116,14 @@ describe('CategoriesService', () => {
       expect(result).toHaveLength(2);
       expect(result[0].name).toBe('Design');
       expect(prismaMock.category.findMany).toHaveBeenCalledWith({
+        where: { deletedAt: null },
         include: {
           _count: {
-            select: { posts: true },
+            select: {
+              posts: {
+                where: { deletedAt: null },
+              },
+            },
           },
         },
         orderBy: { name: 'asc' },
@@ -138,7 +143,7 @@ describe('CategoriesService', () => {
         updatedAt: new Date(),
         posts: [],
       };
-      prismaMock.category.findUnique.mockResolvedValue(mockCategory);
+      prismaMock.category.findFirst.mockResolvedValue(mockCategory);
 
       const result = await service.findOne(1);
 
@@ -146,8 +151,8 @@ describe('CategoriesService', () => {
       expect(result.id).toBe(1);
     });
 
-    it('ควรโยน NotFoundException (404) เมื่อไม่พบหมวดหมู่ตาม ID', async () => {
-      prismaMock.category.findUnique.mockResolvedValue(null);
+    it('ควรโยน NotFoundException (404) เมื่อไม่พบหมวดหมู่ตาม ID หรือถูกลบไปแล้ว', async () => {
+      prismaMock.category.findFirst.mockResolvedValue(null);
 
       await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
     });
@@ -159,21 +164,20 @@ describe('CategoriesService', () => {
   describe('update', () => {
     it('ควรโยน ConflictException หากเปลี่ยนชื่อไปซ้ำกับหมวดหมู่อื่น', async () => {
       // 1. หมวดหมู่ปัจจุบัน (id: 1, name: 'Old')
-      prismaMock.category.findUnique
-        .mockResolvedValueOnce({
-          id: 1,
-          name: 'Old',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          posts: [],
-        })
-        // 2. มีหมวดหมู่อื่น (id: 2) ที่ใช้ชื่อ 'DuplicateName' อยู่แล้ว
-        .mockResolvedValueOnce({
-          id: 2,
-          name: 'DuplicateName',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
+      prismaMock.category.findFirst.mockResolvedValueOnce({
+        id: 1,
+        name: 'Old',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        posts: [],
+      });
+      // 2. มีหมวดหมู่อื่น (id: 2) ที่ใช้ชื่อ 'DuplicateName' อยู่แล้ว
+      prismaMock.category.findUnique.mockResolvedValueOnce({
+        id: 2,
+        name: 'DuplicateName',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
 
       await expect(
         service.update(1, { name: 'DuplicateName' }),
@@ -185,25 +189,46 @@ describe('CategoriesService', () => {
   // 5. Test Suite: remove()
   // ─────────────────────────────────────────────────────────────────────────────
   describe('remove', () => {
-    it('ควรลบหมวดหมู่สำเร็จ', async () => {
-      prismaMock.category.findUnique.mockResolvedValue({
+    it('ควรทำ Soft Delete หมวดหมู่สำเร็จเมื่อไม่มีบทความผูกอยู่', async () => {
+      prismaMock.category.findFirst.mockResolvedValue({
         id: 1,
         name: 'Technology',
         createdAt: new Date(),
         updatedAt: new Date(),
         posts: [],
       });
-      prismaMock.category.delete.mockResolvedValue({
+      // ไม่มี Active Post ผูกอยู่
+      prismaMock.post.count.mockResolvedValue(0);
+      prismaMock.category.update.mockResolvedValue({
         id: 1,
         name: 'Technology',
         createdAt: new Date(),
         updatedAt: new Date(),
-      });
+        deletedAt: new Date(),
+      } as any);
 
       const result = await service.remove(1);
 
       expect(result.id).toBe(1);
-      expect(prismaMock.category.delete).toHaveBeenCalledWith({ where: { id: 1 } });
+      expect(prismaMock.category.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { deletedAt: expect.any(Date) },
+      });
+    });
+
+    it('ควรโยน ConflictException หากยังมีบทความที่ Active ผูกอยู่กับหมวดหมู่ (Soft Restrict)', async () => {
+      prismaMock.category.findFirst.mockResolvedValue({
+        id: 1,
+        name: 'Technology',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        posts: [],
+      });
+      // มี Active Post ผูกอยู่ 2 บทความ
+      prismaMock.post.count.mockResolvedValue(2);
+
+      await expect(service.remove(1)).rejects.toThrow(ConflictException);
+      expect(prismaMock.category.update).not.toHaveBeenCalled();
     });
   });
 });

@@ -84,9 +84,9 @@ export class AuthService {
   async login(loginDto: LoginDto): Promise<AuthResponseDto> {
     const { email, password } = loginDto;
 
-    // 1. ค้นหาผู้ใช้งานด้วยอีเมล
-    const user = await this.prisma.user.findUnique({
-      where: { email },
+    // 1. ค้นหาผู้ใช้งานด้วยอีเมล (เฉพาะบัญชีที่ยังไม่ถูก Soft Delete)
+    const user = await this.prisma.user.findFirst({
+      where: { email, deletedAt: null },
     });
 
     // 2. ถ้าไม่พบผู้ใช้ ให้โยน 401 ทันที
@@ -115,11 +115,11 @@ export class AuthService {
   }
 
   /**
-   * ดึงข้อมูลโปรไฟล์ผู้ใช้งาน
+   * ดึงข้อมูลโปรไฟล์ผู้ใช้งาน (เฉพาะบัญชีที่ยัง Active)
    */
   async getProfile(userId: number) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
       select: {
         id: true,
         email: true,

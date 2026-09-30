@@ -29,7 +29,7 @@
 - **[RBAC] Role-Based Access Control**: แบ่งระดับสิทธิ์ผู้ใช้เป็น `ADMIN` และ `AUTHOR` พร้อมระบบ Ownership Authorization ปกป้องบทความของผู้เขียน
 - **[CRYPTOGRAPHY] Password Hashing (bcrypt)**: เข้ารหัสผ่านอย่างปลอดภัยด้วย Salt Rounds ก่อนบันทึกลงฐานข้อมูล
 - **[CACHE] In-Memory Caching (Redis 7)**: กลยุทธ์ **Cache-Aside Pattern** บน `GET /api/v2/posts` (TTL = 60s) พร้อมระบบ Non-blocking Cache Invalidation (`scanStream`)
-- **[DATABASE] PostgreSQL & Prisma 6**: Data Modeling ที่มี Type-Safety สูงสุด พร้อมความสัมพันธ์ 1-to-Many, Cascade Delete และ Restrict Delete
+- **[DATABASE] PostgreSQL & Prisma 6**: Data Modeling ที่มี Type-Safety สูงสุด พร้อมสถาปัตยกรรม **Soft Delete** (`deletedAt` + Index) รองรับการรักษาข้อมูล, Application-Level Soft Cascade ผ่าน Transaction, และ Soft Restrict Delete
 - **[VALIDATION] Strict DTO Validation**: ป้องกันช่องโหว่ Mass Assignment ด้วย `class-validator` และ `whitelist: true`
 - **[VERSIONING] URI API Versioning**: รองรับทั้ง `/api/v1` (CRUD ปกติ) และ `/api/v2` (Pagination, Metrics, Analytics)
 - **[FILTER] Global Exception Filters**: ระบบดักจับ Error และแปลงเป็น JSON Format มาตรฐานเดียวกันทั้งระบบ
@@ -108,8 +108,8 @@ flowchart TD
 
 ```mermaid
 erDiagram
-    users ||--o{ posts : "authorId (onDelete: Cascade)"
-    categories ||--o{ posts : "categoryId (onDelete: Restrict)"
+    users ||--o{ posts : "authorId (Soft Cascade Transaction)"
+    categories ||--o{ posts : "categoryId (Soft Restrict Check)"
 
     users {
         int id PK
@@ -119,6 +119,7 @@ erDiagram
         Role role "ADMIN | AUTHOR"
         datetime createdAt
         datetime updatedAt
+        datetime deletedAt "Soft Delete Timestamp (Indexed)"
     }
 
     categories {
@@ -126,6 +127,7 @@ erDiagram
         string name UK "Unique Index"
         datetime createdAt
         datetime updatedAt
+        datetime deletedAt "Soft Delete Timestamp (Indexed)"
     }
 
     posts {
@@ -137,17 +139,19 @@ erDiagram
         int categoryId FK "References categories.id"
         datetime createdAt
         datetime updatedAt
+        datetime deletedAt "Soft Delete Timestamp (Indexed)"
     }
 ```
 
 ### Relational Integrity & Constraint Matrix
 
-| Relationship | Constraint | Type | Action on Delete | Business Rationale |
+| Relationship / Field | Constraint | Type | Action on Delete | Business Rationale & Soft Delete Mechanism |
 |---|---|---|---|---|
-| `User -> Post` | `authorId` | Foreign Key | **Cascade** | เมื่อลบผู้ใช้ โพสต์ของผู้ใช้นั้นจะถูกลบทั้งหมด ป้องกันข้อมูลกำพร้า (Orphan Data) |
-| `Category -> Post` | `categoryId` | Foreign Key | **Restrict** | ห้ามลบหมวดหมู่หากยังมีโพสต์ผูกอยู่ เพื่อรักษาความสมบูรณ์ของบทความ |
+| `User -> Post` | `authorId` | Foreign Key | **Soft Cascade** | ทำ Soft Delete มาร์ก `deletedAt = NOW()` ของ User และใช้ `$transaction` ซิงค์มาร์กบทความทั้งหมดของ User คนนั้น |
+| `Category -> Post` | `categoryId` | Foreign Key | **Soft Restrict** | ไม่อนุญาตให้ลบ Category หากยังมีบทความที่มีสถานะ Active (`deletedAt: null`) ผูกอยู่ เพื่อป้องกันบทความกำพร้า |
 | `User.email` | `email` | Unique Index | **Reject Duplicate** | ป้องกันการสมัครสมาชิกซ้ำซ้อน และเพิ่มความเร็วในการสืบค้นตอน Login |
 | `Category.name` | `name` | Unique Index | **Reject Duplicate** | ชื่อหมวดหมู่ต้องไม่ซ้ำกันในระบบ |
+| `*.deletedAt` | `deletedAt` | B-Tree Index | **Filter Optimization** | ทำ Index เพื่อเพิ่มความเร็วในการคิวรี `WHERE deletedAt IS NULL` ทั้งระบบ |
 
 ---
 
@@ -202,21 +206,21 @@ erDiagram
 | `POST` | `/api/v1/auth/login` | Public | เข้าสู่ระบบ (Login & get JWT) |
 | `GET` | `/api/v1/auth/profile` | Authenticated | ดูโปรไฟล์ผู้ใช้ปัจจุบันจาก JWT |
 | `POST` | `/api/v1/users` | Public | สร้างผู้ใช้งาน |
-| `GET` | `/api/v1/users` | Public | ดึงรายชื่อผู้ใช้ทั้งหมด |
-| `GET` | `/api/v1/users/:id` | Public | ดึงข้อมูลผู้ใช้รายบุคคลพร้อมบทความที่เขียน |
+| `GET` | `/api/v1/users` | Public | ดึงรายชื่อผู้ใช้ทั้งหมด (เฉพาะที่ยังไม่ถูกลบ) |
+| `GET` | `/api/v1/users/:id` | Public | ดึงข้อมูลผู้ใช้รายบุคคลพร้อมบทความที่เขียน (เฉพาะที่ยังไม่ถูกลบ) |
 | `PATCH` | `/api/v1/users/:id` | Public | แก้ไขข้อมูลผู้ใช้ |
-| `DELETE` | `/api/v1/users/:id` | Public | ลบผู้ใช้ (Cascade ลบบทความ) |
+| `DELETE` | `/api/v1/users/:id` | Public | **Soft Delete** ผู้ใช้ (Soft Cascade มาร์กลบบทความทั้งหมดของผู้ใช้ผ่าน Transaction) |
 | `POST` | `/api/v1/categories` | ADMIN only | สร้างหมวดหมู่ใหม่ |
-| `GET` | `/api/v1/categories` | Public | ดึงหมวดหมู่ทั้งหมดพร้อมจำนวนบทความ (`_count`) |
-| `GET` | `/api/v1/categories/:id` | Public | ดึงหมวดหมู่ตาม ID พร้อมบทความในหมวดหมู่ |
+| `GET` | `/api/v1/categories` | Public | ดึงหมวดหมู่ทั้งหมดพร้อมจำนวนบทความ Active (`_count`) |
+| `GET` | `/api/v1/categories/:id` | Public | ดึงหมวดหมู่ตาม ID พร้อมบทความ Active ในหมวดหมู่ |
 | `PATCH` | `/api/v1/categories/:id` | ADMIN only | แก้ไขชื่อหมวดหมู่ |
-| `DELETE` | `/api/v1/categories/:id` | ADMIN only | ลบหมวดหมู่ (Restrict หากยังมีบทความ) |
+| `DELETE` | `/api/v1/categories/:id` | ADMIN only | **Soft Delete** หมวดหมู่ (Soft Restrict ปฏิเสธหากยังมี Active บทความผูกอยู่) |
 | `POST` | `/api/v1/posts` | Authenticated | สร้างบทความ (ผูก `authorId` จาก Token อัตโนมัติ) |
-| `GET` | `/api/v1/posts` | Public | ดึงบทความทั้งหมดแบบ Flat Array |
-| `GET` | `/api/v1/posts/published` | Public | ดึงเฉพาะบทความที่เผยแพร่แล้ว (`isPublished = true`) |
-| `GET` | `/api/v1/posts/:id` | Public | ดึงบทความตาม ID พร้อมชื่อผู้เขียนและหมวดหมู่ |
+| `GET` | `/api/v1/posts` | Public | ดึงบทความทั้งหมดแบบ Flat Array (เฉพาะที่ยังไม่ถูกลบ) |
+| `GET` | `/api/v1/posts/published` | Public | ดึงเฉพาะบทความที่เผยแพร่แล้ว (`isPublished = true` และยังไม่ถูกลบ) |
+| `GET` | `/api/v1/posts/:id` | Public | ดึงบทความตาม ID พร้อมชื่อผู้เขียนและหมวดหมู่ (เฉพาะที่ยังไม่ถูกลบ) |
 | `PATCH` | `/api/v1/posts/:id` | Owner / Admin | แก้ไขบทความ (เฉพาะผู้เขียนเดิม หรือ Admin) |
-| `DELETE` | `/api/v1/posts/:id` | Owner / Admin | ลบบทความ (เฉพาะผู้เขียนเดิม หรือ Admin) |
+| `DELETE` | `/api/v1/posts/:id` | Owner / Admin | **Soft Delete** บทความ (เฉพาะผู้เขียนเดิม หรือ Admin พร้อมล้างแคช Redis) |
 
 ---
 
@@ -310,20 +314,20 @@ exit
 - **Deep Mocking**: ใช้ `mockDeep<PrismaClient>()` จำลองพฤติกรรมฐานข้อมูลทั้งหมด ทำให้รันเทสต์ได้โดยไม่ต้องต่อ Network หรือ Database จริง
 - **AAA Pattern**: โครงสร้าง Arrange - Act - Assert ชัดเจน
 
-### Test Suites Breakdown (46 Tests Passed)
+### Test Suites Breakdown (47 Tests Passed)
 
 | Test Suite File | Tests Count | Scope of Testing |
 |---|---|---|
-| `src/auth/auth.service.spec.ts` | 7 tests | Register with bcrypt, Login with token signing, Invalid password handling |
+| `src/auth/auth.service.spec.ts` | 7 tests | Register with bcrypt, Login with token signing, Invalid password handling, Active user check |
 | `src/auth/guards/roles.guard.spec.ts` | 3 tests | Role metadata reading, Admin authorization, Insufficient role rejection |
-| `src/categories/categories.service.spec.ts` | 7 tests | Duplicate category prevention, Category CRUD, Restrict check |
-| `src/users/users.service.spec.ts` | 8 tests | Duplicate email check, Password hashing integration, Role provisioning, User CRUD |
-| `src/posts/posts.service.spec.ts` | 13 tests | V1 CRUD, Ownership checks (Admin vs Author), V2 Pagination, Cache Hit/Miss, Invalidation |
+| `src/categories/categories.service.spec.ts` | 8 tests | Duplicate prevention, Category CRUD, Soft Delete, Soft Restrict check (Active posts block) |
+| `src/users/users.service.spec.ts` | 8 tests | Duplicate email check, Password hashing, Role provisioning, User CRUD, Soft Cascade Transaction |
+| `src/posts/posts.service.spec.ts` | 13 tests | V1 CRUD, Soft Delete & Ownership (Admin vs Author), V2 Pagination, Cache Hit/Miss, Invalidation |
 | `src/redis/redis.service.spec.ts` | 8 tests | JSON get/set with TTL, Single key delete, Non-blocking scanStream pipeline, Lifecycle |
 
 ### Test Commands
 ```bash
-# รัน Unit Test ทั้งหมด 46 ข้อ
+# รัน Unit Test ทั้งหมด 47 ข้อ
 npm test
 
 # รัน Test แบบ Watch Mode (Hot Reload เมื่อโค้ดเปลี่ยน)

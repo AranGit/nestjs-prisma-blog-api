@@ -122,7 +122,7 @@ describe('UsersService', () => {
   // 2. Test Suite: findAll()
   // ─────────────────────────────────────────────────────────────────────────────
   describe('findAll', () => {
-    it('ควรคืนค่าผู้ใช้ทั้งหมด', async () => {
+    it('ควรคืนค่าผู้ใช้ทั้งหมดเฉพาะที่ยังไม่ถูก Soft Delete', async () => {
       const mockUsers = [
         { id: 1, email: 'user1@example.com', name: 'User 1', createdAt: new Date(), updatedAt: new Date() },
         { id: 2, email: 'user2@example.com', name: 'User 2', createdAt: new Date(), updatedAt: new Date() },
@@ -133,6 +133,17 @@ describe('UsersService', () => {
 
       expect(result).toHaveLength(2);
       expect(result[0].email).toBe('user1@example.com');
+      expect(prismaMock.user.findMany).toHaveBeenCalledWith({
+        where: { deletedAt: null },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
     });
   });
 
@@ -149,16 +160,23 @@ describe('UsersService', () => {
         updatedAt: new Date(),
         posts: [{ id: 101, title: 'My First Post', isPublished: true, createdAt: new Date() }],
       };
-      prismaMock.user.findUnique.mockResolvedValue(mockUserWithPosts as any);
+      prismaMock.user.findFirst.mockResolvedValue(mockUserWithPosts as any);
 
       const result = await service.findOne(1);
 
       expect(result).toEqual(mockUserWithPosts);
       expect(result.posts).toHaveLength(1);
+      expect(prismaMock.user.findFirst).toHaveBeenCalledWith({
+        where: { id: 1, deletedAt: null },
+        select: expect.objectContaining({
+          id: true,
+          email: true,
+        }),
+      });
     });
 
-    it('ควรโยน NotFoundException เมื่อไม่พบ User ID', async () => {
-      prismaMock.user.findUnique.mockResolvedValue(null);
+    it('ควรโยน NotFoundException เมื่อไม่พบ User ID หรือถูกลบไปแล้ว', async () => {
+      prismaMock.user.findFirst.mockResolvedValue(null);
 
       await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
     });
@@ -169,7 +187,7 @@ describe('UsersService', () => {
   // ─────────────────────────────────────────────────────────────────────────────
   describe('update', () => {
     it('ควรอัปเดตข้อมูลผู้ใช้สำเร็จ', async () => {
-      prismaMock.user.findUnique.mockResolvedValue({
+      prismaMock.user.findFirst.mockResolvedValue({
         id: 1,
         email: 'john@example.com',
         name: 'John Doe',
@@ -194,8 +212,8 @@ describe('UsersService', () => {
   });
 
   describe('remove', () => {
-    it('ควรลบผู้ใช้สำเร็จ', async () => {
-      prismaMock.user.findUnique.mockResolvedValue({
+    it('ควรทำ Soft Cascade ลบทั้งผู้ใช้และบทความของผู้ใช้ผ่าน Transaction สำเร็จ', async () => {
+      prismaMock.user.findFirst.mockResolvedValue({
         id: 1,
         email: 'john@example.com',
         name: 'John Doe',
@@ -204,19 +222,17 @@ describe('UsersService', () => {
         posts: [],
       } as any);
 
-      prismaMock.user.delete.mockResolvedValue({
+      const mockDeletedUser = {
         id: 1,
         email: 'john@example.com',
         name: 'John Doe',
-      } as any);
+      };
+      prismaMock.$transaction.mockResolvedValue([mockDeletedUser, { count: 3 }] as any);
 
       const result = await service.remove(1);
 
       expect(result.id).toBe(1);
-      expect(prismaMock.user.delete).toHaveBeenCalledWith({
-        where: { id: 1 },
-        select: { id: true, email: true, name: true },
-      });
+      expect(prismaMock.$transaction).toHaveBeenCalledOnce();
     });
   });
 });

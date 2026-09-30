@@ -62,15 +62,16 @@ flowchart TD
 ---
 
 ### [STEP 2] Prisma ORM & Data Modeling
-* **[GOAL]**: เข้าใจการออกแบบ Schema ความสัมพันธ์แบบ 1-to-Many และข้อกำหนด Referential Integrity
+* **[GOAL]**: เข้าใจการออกแบบ Schema ความสัมพันธ์แบบ 1-to-Many, การทำ Soft Delete และข้อกำหนด Referential Integrity
 * **[SOURCE FILES]**:
-  1. [`prisma/schema.prisma`](../prisma/schema.prisma) - นิยามตาราง `users`, `categories`, `posts` และ Enum `Role`
+  1. [`prisma/schema.prisma`](../prisma/schema.prisma) - นิยามตาราง `users`, `categories`, `posts`, ฟิลด์ `deletedAt` พร้อม Index และ Enum `Role`
   2. [`src/prisma/prisma.service.ts`](../src/prisma/prisma.service.ts) - Singleton Wrapper ห่อหุ้ม `PrismaClient` ภายใต้ NestJS Lifecycle
 * **[KEY ARCHITECTURAL CONCEPTS]**:
-  - ความแตกต่างระหว่าง `onDelete: Cascade` (User -> Post) กับ `onDelete: Restrict` (Category -> Post)
+  - ความแตกต่างระหว่าง **Hard Delete** (ลบถาวรจาก Disk) กับ **Soft Delete** (`deletedAt DateTime?` + B-Tree Index)
+  - ทำไม DB `onDelete: Cascade` ไม่ทำงานบน Soft Delete และทำไมต้องใช้ **Prisma `$transaction`** ทำ Application-Level Soft Cascade
   - การกำหนด Unique Index บนคอลัมน์ `email` และ `name` เพื่อความรวดเร็วและป้องกันข้อมูลซ้ำ
 * **[CHECKPOINT]**:
-  - อธิบายได้ว่าทำไมการลบ Category ที่ยังมี Post ผูกอยู่จึงถูกปฏิเสธโดย Database
+  - อธิบายได้ว่าทำไมการ Soft Delete User จึงต้องสั่งมาร์กบทความของผู้ใช้คนนั้นให้เป็น Soft Delete ภายใต้ `$transaction` ในระดับ Service
 
 ---
 
@@ -79,11 +80,12 @@ flowchart TD
 * **[SOURCE FILES]**:
   1. [`src/categories/dto/create-category.dto.ts`](../src/categories/dto/create-category.dto.ts) - การใช้ class-validator กำหนดเงื่อนไขข้อมูลนำเข้า
   2. [`src/categories/categories.controller.ts`](../src/categories/categories.controller.ts) - การรับ HTTP Method (`@Get`, `@Post`), พารามิเตอร์ (`@Body`, `@Param`) และ Swagger Decorators
-  3. [`src/categories/categories.service.ts`](../src/categories/categories.service.ts) - การเขียน Business Logic, การเช็คชื่อซ้ำ และการดึงข้อมูลพร้อม `_count`
+  3. [`src/categories/categories.service.ts`](../src/categories/categories.service.ts) - การเขียน Business Logic, การเช็คชื่อซ้ำ, Soft Restrict Delete, และการดึงข้อมูลพร้อม `_count`
   4. [`src/categories/categories.module.ts`](../src/categories/categories.module.ts) - การรวม Controller และ Provider เข้าเป็น Feature Module
 * **[KEY ARCHITECTURAL CONCEPTS]**:
   - กฎเหล็ก: ห้ามเขียนคำสั่ง Database Query ใน Controller เด็ดขาด
   - Separation of Concerns: Controller จัดการ HTTP Routing ส่วน Service จัดการ Business Rules
+  - Soft Restrict Pattern: ตรวจสอบจำนวน Active Posts ก่อนอนุญาตให้ Soft Delete Category
 * **[CHECKPOINT]**:
   - อธิบายการทำงานของ Dependency Injection ที่ส่ง `PrismaService` เข้าสู่ `CategoriesService`
 
@@ -92,28 +94,29 @@ flowchart TD
 ### [STEP 4] Authentication, Hashing & Role-Based Access Control
 * **[GOAL]**: เข้าใจกลไกการรักษาความปลอดภัย การเข้ารหัสผ่าน การออก Token และการจำกัดสิทธิ์ Endpoint
 * **[SOURCE FILES]**:
-  1. [`src/auth/auth.service.ts`](../src/auth/auth.service.ts) - การใช้ `bcrypt.hash` ตอนสมัครสมาชิก และ `bcrypt.compare` + `jwtService.sign` ตอนเข้าสู่ระบบ
-  2. [`src/auth/strategies/jwt.strategy.ts`](../src/auth/strategies/jwt.strategy.ts) - Passport Strategy สกัด Bearer Token และดึง User Profile มาเก็บใน `req.user`
+  1. [`src/auth/auth.service.ts`](../src/auth/auth.service.ts) - การใช้ `bcrypt.hash` ตอนสมัครสมาชิก และ `bcrypt.compare` + `jwtService.sign` ตอนเข้าสู่ระบบ (กรองเฉพาะ Active Users)
+  2. [`src/auth/strategies/jwt.strategy.ts`](../src/auth/strategies/jwt.strategy.ts) - Passport Strategy สกัด Bearer Token ตรวจสอบสถานะ User และดึง Profile มาเก็บใน `req.user`
   3. [`src/auth/guards/roles.guard.ts`](../src/auth/guards/roles.guard.ts) - Guard ตรวจสอบ Metadata จาก `@Roles()` กับ Role ของผู้ใช้ปัจจุบัน
   4. [`src/auth/decorators/current-user.decorator.ts`](../src/auth/decorators/current-user.decorator.ts) - Custom Parameter Decorator ดึง User สะอาดตา
 * **[KEY ARCHITECTURAL CONCEPTS]**:
   - ข้อแตกต่างระหว่าง Authentication (ระบุตัวตน) กับ Authorization (ตรวจสอบสิทธิ์)
-  - ทำไมไม่ควรเก็บข้อมูล Sensitive เช่น รหัสผ่าน ไว้ใน JWT Payload
+  - ทำไมผู้ใช้ที่ถูก Soft Delete ไปแล้ว จึงต้องถูกปฏิเสธทั้งการ Login และการยิง Request ผ่าน JWT
 * **[CHECKPOINT]**:
   - สามารถไล่ Flow ได้ตั้งแต่ Client ยิง Login -> ได้รับ Token -> แนบ Header `Authorization: Bearer <token>` -> Guard อนุญาตให้เข้าถึง
 
 ---
 
-### [STEP 5] Ownership Authorization (Posts Module v1)
-* **[GOAL]**: เรียนรู้การผูกข้อมูลจาก Token อัตโนมัติ และการทำ Resource-Based Ownership Check
+### [STEP 5] Ownership Authorization & Soft Delete (Posts Module v1)
+* **[GOAL]**: เรียนรู้การผูกข้อมูลจาก Token อัตโนมัติ, การทำ Resource-Based Ownership Check และ Soft Delete Pattern
 * **[SOURCE FILES]**:
   1. [`src/posts/posts.controller.ts`](../src/posts/posts.controller.ts) - การป้องกัน Route ด้วย `@UseGuards(JwtAuthGuard)` และส่ง `@CurrentUser()` เข้า Service
-  2. [`src/posts/posts.service.ts`](../src/posts/posts.service.ts) - เมธอด `create`, `update`, `remove`
+  2. [`src/posts/posts.service.ts`](../src/posts/posts.service.ts) - เมธอด `create`, `update`, `remove` (Soft Delete ด้วย `deletedAt: new Date()`)
 * **[KEY ARCHITECTURAL CONCEPTS]**:
   - ผู้ใช้ไม่ต้องส่ง `authorId` มาใน Body ตอนสร้างบทความ ระบบดึงจาก JWT ป้องกันการสวมรอย
   - ในคำสั่ง `update` และ `remove`: ADMIN แก้ไข/ลบได้ทุกบทความ ส่วน AUTHOR แก้ไข/ลบได้เฉพาะบทความที่ตนเองเป็นเจ้าของ
+  - ในคำสั่ง `remove`: ใช้ Soft Delete บันทึก `deletedAt = NOW()` และสั่งล้าง Redis Cache ทันที
 * **[CHECKPOINT]**:
-  - อธิบายเงื่อนไข if-else ที่ใช้ตรวจสอบสิทธิ์ใน `update()` และ `remove()`
+  - อธิบายเงื่อนไข if-else ที่ใช้ตรวจสอบสิทธิ์ใน `update()` และ `remove()` และผลกระทบต่อ Redis Cache
 
 ---
 
@@ -151,15 +154,16 @@ flowchart TD
 * **[GOAL]**: ฝึกฝนการเขียน Automated Tests และการจำลองระบบภายนอกด้วย Deep Mocking
 * **[SOURCE FILES]**:
   1. [`vitest.config.ts`](../vitest.config.ts) - การตั้งค่า Vitest ในโปรเจกต์ NestJS
-  2. [`src/categories/categories.service.spec.ts`](../src/categories/categories.service.spec.ts) - การ Mock Prisma Client ด้วย `vitest-mock-extended`
+  2. [`src/categories/categories.service.spec.ts`](../src/categories/categories.service.spec.ts) - การ Mock Prisma Client ทดสอบ Soft Delete และ Soft Restrict
   3. [`src/auth/guards/roles.guard.spec.ts`](../src/auth/guards/roles.guard.spec.ts) - การ Mock `ExecutionContext` และ `Reflector`
-  4. [`src/posts/posts.service.spec.ts`](../src/posts/posts.service.spec.ts) - การทดสอบครอบคลุม Ownership, Cache Hit, Cache Miss, Invalidation
-  5. [`src/redis/redis.service.spec.ts`](../src/redis/redis.service.spec.ts) - การทดสอบ Redis Service และ Non-blocking Stream
+  4. [`src/posts/posts.service.spec.ts`](../src/posts/posts.service.spec.ts) - การทดสอบครอบคลุม Soft Delete, Ownership, Cache Hit, Cache Miss, Invalidation
+  5. [`src/users/users.service.spec.ts`](../src/users/users.service.spec.ts) - การทดสอบ Soft Cascade Transaction
+  6. [`src/redis/redis.service.spec.ts`](../src/redis/redis.service.spec.ts) - การทดสอบ Redis Service และ Non-blocking Stream
 * **[KEY ARCHITECTURAL CONCEPTS]**:
   - โครงสร้าง AAA (Arrange - Act - Assert)
   - ประโยชน์ของ In-Memory Mocking: เทสต์รันได้รวดเร็ว (< 1 วินาที) โดยไม่ต้องเปิด Docker หรือต่อ Network จริง
 * **[CHECKPOINT]**:
-  - รัน `npm test` และยืนยันว่าการทดสอบทั้ง 46 ข้อผ่านทั้งหมด 100%
+  - รัน `npm test` และยืนยันว่าการทดสอบทั้ง 47 ข้อผ่านทั้งหมด 100%
 
 ---
 
@@ -171,11 +175,12 @@ flowchart TD
 | **Architecture** | อธิบายบทบาทหน้าที่ที่แตกต่างกันของ Controller, Service, Module, DTO ได้ | [ ] |
 | **Validation** | เข้าใจการทำงานของ `class-validator`, `ValidationPipe` และการป้องกัน Mass Assignment | [ ] |
 | **ORM & Relational DB** | ออกแบบ Schema, ความสัมพันธ์ 1-to-Many, และอธิบาย Cascade vs Restrict ได้ | [ ] |
+| **Soft Delete & Integrity** | อธิบายความต่างระหว่าง Hard vs Soft Delete รวมถึงการทำ Soft Cascade ด้วย `$transaction` และ Soft Restrict ได้ | [ ] |
 | **Authentication** | อธิบายการไหลของข้อมูลตอน Login -> Bcrypt Verify -> Sign JWT -> Bearer Token ได้ | [ ] |
 | **Authorization** | อธิบายความต่างระหว่าง Role-Based (Admin/Author) กับ Resource Ownership ได้ | [ ] |
 | **Performance** | อธิบายหลักการ Pagination, Concurrency ด้วย `Promise.all` ได้ | [ ] |
 | **Caching** | อธิบาย Cache-Aside, TTL, และเหตุผลที่ห้ามใช้ `KEYS *` ใน Production ได้ | [ ] |
-| **Software Quality** | อธิบายหลักการ Deep Mocking และรัน Unit Test 46 ข้อผ่านครบถ้วนได้ | [ ] |
+| **Software Quality** | อธิบายหลักการ Deep Mocking และรัน Unit Test 47 ข้อผ่านครบถ้วนได้ | [ ] |
 
 ---
 
